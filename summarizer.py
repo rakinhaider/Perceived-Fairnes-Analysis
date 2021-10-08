@@ -26,7 +26,7 @@ def load_demographic(std_id, data_dir):
 def load_config(data_dir):
     config = pd.read_csv(os.path.join(data_dir, 'config'),
                          sep='\t', index_col=0, squeeze=True, header=None)
-    # print(config)
+    # print(config_09202021)
     global SKIP_ROWS
     if not pd.isna(config['SKIP_ROWS']):
         SKIP_ROWS = SKIP_ROWS + config['SKIP_ROWS'].split(',')
@@ -105,8 +105,10 @@ ATNT_ANS = ['Model X is more likely to predict correctly for female applicants t
 COMMON_QS = [
     'Q5.7', 'Q5.8', 'Q5.9', 'Q5.10', 'Q5.11',
     'Q5.12', 'Q6.7', 'Q6.8', 'Q6.9', 'Q6.10', 'Q6.11', 'Q6.12', 'Q10.14',
-    'Q10.15', 'Q10.16', 'Q10.17', 'Q10.18', 'Q10.19', 'Q10.20', 'Q10.21'
+    'Q10.15', 'Q10.16', 'Q10.17', 'Q10.18', 'Q10.19', 'Q10.20', 'Q10.21',
 ]
+
+MODELZ_QS = ['Q199', 'Q203', 'Q200', 'Q204', 'Q201', 'Q205']
 
 ICU_QS = ['Q11.6', 'Q11.9', 'Q11.10', 'Q11.13', 'Q11.14', 'Q11.17',
           'Q11.18', 'Q11.21', 'Q11.22', 'Q11.25', 'Q11.28', 'Q12.1'
@@ -166,6 +168,15 @@ def format_responses(df, questions, data_dir):
                 s += '{}: {}\n'.format(q, str(questions[q]))
                 s += 'Ans: {}\n'.format(str(row[q]))
             s += '\n'
+            for i, q in enumerate(MODELZ_QS):
+                formatted = str(questions[q]).replace('[Field-pref_model]',
+                                                     row['pref_model'])
+                s += '{}: {}\n'.format(q, formatted)
+                formatted = str(row[q])
+                formatted = formatted.replace('${e://Field/pref_model}',
+                                              row['pref_model'])
+                s += 'Ans: {}\n'.format(formatted)
+            s += '\n'
             scenario_qs = get_scenario_qs(row['scenario'])
             for i, q in enumerate(scenario_qs):
                 s += '{}: {}\n'.format(q, str(questions[q]))
@@ -183,12 +194,13 @@ def format_responses(df, questions, data_dir):
             f.flush()
 
 
-def get_aggregate(df, cds, privileged):
+def get_aggregate(df, cds, privileged, verbose=False):
     grouped = df.groupby(by=['scenario'], axis=0)
     cd_dataframe = pd.DataFrame(index=[c for c in cds if c is not None])
     for scenario, group_df in grouped:
-        print('\nScenario', scenario)
-        print(group_df['Q10.20'].value_counts())
+        if verbose:
+            print('\nScenario', scenario)
+            print(group_df['Q10.20'].value_counts())
         scenario_qs = get_scenario_qs(scenario)
         pgm_col = scenario_qs[-1]
         if privileged:
@@ -219,7 +231,8 @@ def get_aggregate(df, cds, privileged):
     cd_dataframe.replace({'DB': {'Yes': 1, 'No': 0}}, inplace=True)
     cd_dataframe.replace({'DT': {'Yes': 'High', 'No': 'Low'}}, inplace=True)
     cd_dataframe = cd_dataframe.transpose()
-    print(cd_dataframe)
+    if verbose:
+        print(cd_dataframe)
     return cd_dataframe
 
 
@@ -232,19 +245,58 @@ def get_probabilities(df, scenario):
         'Probably model Y': -1,
         'Definitely model Y': -1
     }})
+    df = df.replace({'Q201': {
+        'Definitely ${e://Field/pref_model}': 1,
+        'Probably ${e://Field/pref_model}': 1,
+        'Netiher ${e://Field/pref_model} nor model Z': 0,
+        'Probably model Z': -1,
+        'Definitely model Z': -1
+    }})
     df = df[df['scenario'] == scenario]
 
     prob = pd.DataFrame()
     counts = df['Q10.20'].value_counts().reindex(
         [1, 0, -1], fill_value=0
     )
-    print(counts)
-    na, nn, nd = counts[1], counts[0], counts[-1]
+    print(scenario)
+    # print(counts)
+    n_efpr, n_none, n_eo = counts[1], counts[0], counts[-1]
     np = sum(counts)
-    prob['EFPR'] = [(nd + nn/2) / np, (na + nn/2) / np]
-    prob['EO'] = [(na + nn/2) / np, (nd + nn/2) / np]
+    prob['EFPR'] = [(n_eo + n_none/2) / np, (n_efpr + n_none/2) / np]
+    prob['EO'] = [(n_efpr + n_none/2) / np, (n_eo + n_none/2) / np]
+    counts = df['Q201'].value_counts().reindex(
+        [1, 0, -1], fill_value=0
+    )
+    n_efnr = counts[-1]
+    n_none = counts[0]
+    n_x_or_y = counts[1]
+    prob['EFNR'] = [(n_x_or_y + n_none/2) / np, (n_efnr + n_none/2) / np]
     print(prob)
-
+    # print(df[['Q10.20', 'Q201']].value_counts())
+    nx, ny, nz = 0, 0, 0
+    for i, row in df[['Q10.20', 'Q201']].iterrows():
+        if row['Q201'] == -1:
+            nz += 1
+        elif row['Q201'] == 0:
+            if row['Q10.20'] == 1:
+                nx += 1
+            elif row['Q10.20'] == -1:
+                ny += 1
+            else:
+                nx += 1
+                ny += 1
+            nz += 1
+        else:
+            if row['Q10.20'] == 1:
+                nx += 1
+            elif row['Q10.20'] == -1:
+                ny += 1
+            else:
+                nx += 1
+                ny += 1
+        # print(row)
+        # print(nx, ny, nz)
+    # print(nx/len(df), ny/len(df), nz/len(df))
 
 if __name__ == "__main__":
 
@@ -254,19 +306,20 @@ if __name__ == "__main__":
     data_dir = os.path.join(data_dir, batch)
     out_dir = os.path.join(out_dir, batch)
     if not os.path.exists(out_dir): os.mkdir(out_dir)
-    fname = 'Pilot21_v2.0.csv'
+    fname = 'Pilot21_v2.0_10082021.csv'
 
     config = load_config(data_dir)
-    print(config)
     df = pd.read_csv(os.path.join(data_dir, fname), skiprows=SKIP_ROWS)
     questions = {c: df.iloc[0][c] for c in df.columns}
     df.drop(index=0, axis=0, inplace=True)
-    # print(*[c for c in df.columns], sep='\n')
     keep_latest_from_pid(df)
 
     # AWAITING REVIEW
     data_dir_ar = os.path.join(data_dir, AWAITING_REVIEW)
     merged = merge_demographics(df, data_dir_ar)
+    # allid = merged[PROLIFIC_PID]
+    # allid.sort_values()
+    # allid.to_csv(os.path.join(data_dir, 'all_id.csv'), sep='\t')
     completed = merged[merged['entered_code'] == '19AE28A9']
     validate_completed_counts(completed, data_dir_ar)
     format_responses(completed, questions, data_dir_ar)
@@ -280,14 +333,16 @@ if __name__ == "__main__":
         format_responses(approved, questions, data_dir_ap)
 
         if not AWAITING_REVIEW in approved['status'].values:
-            print(False)
-            cd_agg = get_aggregate(approved, CDS, privileged=None)
+            cd_agg = get_aggregate(approved, CDS, privileged=None, verbose=False)
+            print(cd_agg)
             cd_agg.to_csv(os.path.join(out_dir, 'cd_agg.tsv'), sep='\t')
 
-            cd_agg = get_aggregate(approved, CDS, privileged=True)
+            cd_agg = get_aggregate(approved, CDS, privileged=True, verbose=False)
+            print(cd_agg)
             cd_agg.to_csv(os.path.join(out_dir, 'cd_agg_priv.tsv'), sep='\t')
 
-            cd_agg = get_aggregate(approved, CDS, privileged=False)
+            cd_agg = get_aggregate(approved, CDS, privileged=False, verbose=False)
+            print(cd_agg)
             cd_agg.to_csv(os.path.join(out_dir, 'cd_agg_unpriv.tsv'), sep='\t')
 
             get_probabilities(approved, 'icu')
