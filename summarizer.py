@@ -1,19 +1,10 @@
 import pandas as pd
 import os
+from collections import defaultdict
 
-APPROVED = 'APPROVED'
-
-AWAITING_REVIEW = 'AWAITING REVIEW'
-
-STUDY_ID = 'STUDY_ID'
-PROLIFIC_PID = 'PROLIFIC_PID'
-MAJ_RESP_COUNT = 'MAJ_RESP_COUNT'
-MIN_RESP_COUNT = 'MIN_RESP_COUNT'
-MAJ_STD_ID = 'MAJ_STD_ID'
-MIN_STD_ID = 'MIN_STD_ID'
-MAJ_APPROVED = 'MAJ_APPROVED'
-MIN_APPROVED = 'MIN_APPROVED'
-SKIP_ROWS = [2]
+from constants import *
+from survey_info import *
+from survey_info import CHOICES
 
 
 def load_demographic(std_id, data_dir):
@@ -27,8 +18,8 @@ def load_config(data_dir):
     config = pd.read_csv(os.path.join(data_dir, 'config'),
                          sep='\t', index_col=0, squeeze=True, header=None)
     # print(config_09202021)
-    global SKIP_ROWS
     if not pd.isna(config['SKIP_ROWS']):
+        global SKIP_ROWS
         SKIP_ROWS = SKIP_ROWS + config['SKIP_ROWS'].split(',')
         SKIP_ROWS = [int(s) for s in SKIP_ROWS]
 
@@ -62,6 +53,7 @@ def merge_demographics(df, data_dir):
     demographics.reset_index(inplace=True, drop=True)
     # print(demographics)
     joined = df.join(demographics.set_index(PROLIFIC_PID), on=PROLIFIC_PID)
+    print(joined[PROLIFIC_PID])
     return joined
 
 
@@ -72,6 +64,7 @@ def validate_completed_counts(df, data_dir):
             count = config[MAJ_RESP_COUNT]
         else:
             count = config[MIN_RESP_COUNT]
+        incorrect_code = len(group_df[group_df['entered_code'] != COMPLETION_CODE])
         print('Maj' if std_id == config[MAJ_STD_ID] else 'MIN',
               std_id, len(group_df), count)
         ids = group_df[PROLIFIC_PID].sort_values()
@@ -81,7 +74,6 @@ def validate_completed_counts(df, data_dir):
 
 
 def validate_approved_counts(df, data_dir):
-    print(APPROVED)
     grouped = df.groupby(by=[STUDY_ID], axis=0)
     for std_id, group_df in grouped:
         if config[MAJ_STD_ID] == std_id:
@@ -95,36 +87,6 @@ def validate_approved_counts(df, data_dir):
         assert len(group_df) == int(count)
         assert all(group_df[PROLIFIC_PID].value_counts() == 1)
 
-ATNT_QS = ['Q240', 'Q241', 'Q242', 'Q243']
-
-ATNT_ANS = ['Model X is more likely to predict correctly for female applicants than male applicants.',
-            'Figure 1',
-            'Female applicants will be more likely to mistakenly be rejected than male applicants.',
-            'Figure 2']
-
-COMMON_QS = [
-    'Q5.7', 'Q5.8', 'Q5.9', 'Q5.10', 'Q5.11',
-    'Q5.12', 'Q6.7', 'Q6.8', 'Q6.9', 'Q6.10', 'Q6.11', 'Q6.12', 'Q10.14',
-    'Q10.15', 'Q10.16', 'Q10.17', 'Q10.18', 'Q10.19', 'Q10.20', 'Q10.21',
-]
-
-MODELZ_QS = ['Q199', 'Q203', 'Q200', 'Q204', 'Q201', 'Q205']
-
-ICU_QS = ['Q11.6', 'Q11.9', 'Q11.10', 'Q11.13', 'Q11.14', 'Q11.17',
-          'Q11.18', 'Q11.21', 'Q11.22', 'Q11.25', 'Q11.28', 'Q12.1'
-]
-
-FRAUTH_QS = ['Q11.7', 'Q11.9', 'Q11.11', 'Q11.13', 'Q11.15', 'Q11.17',
-             'Q11.19', 'Q11.21', 'Q11.23', 'Q11.26', 'Q11.29', 'Q12.2'
-]
-
-RENT_QS = ['Q11.8', 'Q11.9', 'Q11.12', 'Q11.13', 'Q11.16', 'Q11.17',
-           'Q11.20', 'Q11.21', 'Q11.24', 'Q11.27', 'Q11.30', 'Q12.3'
-]
-
-CDS = ['IFPI', None, 'IFNI', None, 'SFPI', None, 'SFNI', None,
-       'AB', 'DB', 'DT', 'PGM']
-
 
 def get_scenario_qs(scenario):
     if scenario == 'icu':
@@ -137,6 +99,7 @@ def get_scenario_qs(scenario):
 
 
 def format_responses(df, questions, data_dir):
+    correct_count = {}
     for index, row in df.iterrows():
         pid = row[PROLIFIC_PID]
         study_id = row[STUDY_ID]
@@ -146,6 +109,9 @@ def format_responses(df, questions, data_dir):
         fname = os.path.join(fname, 'responses')
         if not os.path.exists(fname):
             os.mkdir(fname)
+
+        if study_id not in correct_count:
+            correct_count[study_id] = defaultdict(list)
 
         fname = os.path.join(fname, pid + '.txt')
         with open(fname, 'w') as f:
@@ -163,6 +129,7 @@ def format_responses(df, questions, data_dir):
                     correct -= 1
                     s += 'Incorrect Attention Check\n'
             s += 'Correct Attentions {}\n'.format(correct)
+            correct_count[study_id][correct].append(pid)
             s += '\n'
             for i, q in enumerate(COMMON_QS):
                 s += '{}: {}\n'.format(q, str(questions[q]))
@@ -193,8 +160,19 @@ def format_responses(df, questions, data_dir):
             f.write(s)
             f.flush()
 
+    """
+    for std_id in correct_count:
+        print(std_id)
+        std_dict = correct_count[std_id]
+        print([len(std_dict[i]) for i in range(5)])
+        for i in range(5):
+            print(i)
+            print(*std_dict[i], sep='\n')
+            print()
+    """
 
-def get_aggregate(df, cds, privileged, verbose=False):
+
+def get_cd_aggregate(df, cds, privileged, verbose=False):
     grouped = df.groupby(by=['scenario'], axis=0)
     cd_dataframe = pd.DataFrame(index=[c for c in cds if c is not None])
     for scenario, group_df in grouped:
@@ -202,6 +180,9 @@ def get_aggregate(df, cds, privileged, verbose=False):
             print('\nScenario', scenario)
             print(group_df['Q10.20'].value_counts())
         scenario_qs = get_scenario_qs(scenario)
+        # TODO: Correct the following computation.
+        #  The selection should be done on ethnicity, not on self-declaration.
+        # group_df = group_df[group_df[STUDY_ID] == study_id]
         pgm_col = scenario_qs[-1]
         if privileged:
             group_df = group_df[group_df[pgm_col] == 'Advantaged']
@@ -236,77 +217,74 @@ def get_aggregate(df, cds, privileged, verbose=False):
     return cd_dataframe
 
 
-def get_probabilities(df, scenario):
+def get_probabilities(df, criteria):
     df = df.copy()
-    df = df.replace({'Q10.20': {
-        'Definitely model X': 1,
-        'Probably model X': 1,
-        'Netiher model X not model Y': 0,
-        'Probably model Y': -1,
-        'Definitely model Y': -1
-    }})
-    df = df.replace({'Q201': {
-        'Definitely ${e://Field/pref_model}': 1,
-        'Probably ${e://Field/pref_model}': 1,
-        'Netiher ${e://Field/pref_model} nor model Z': 0,
-        'Probably model Z': -1,
-        'Definitely model Z': -1
-    }})
-    df = df[df['scenario'] == scenario]
+    trade_off_qs = 'Q10.20'
+    xz_trade_off_qs = 'Q201'
+    df = df.replace({
+        trade_off_qs: dict(zip(CHOICES[trade_off_qs], [1, 1, 0, -1, -1]))
+    })
+    df = df.replace({
+        xz_trade_off_qs: dict(zip(CHOICES[xz_trade_off_qs], [1, 1, 0, -1, -1]))
+    })
 
-    prob = pd.DataFrame()
-    counts = df['Q10.20'].value_counts().reindex(
-        [1, 0, -1], fill_value=0
-    )
-    print(scenario)
-    # print(counts)
-    n_efpr, n_none, n_eo = counts[1], counts[0], counts[-1]
-    np = sum(counts)
-    prob['EFPR'] = [(n_eo + n_none/2) / np, (n_efpr + n_none/2) / np]
-    prob['EO'] = [(n_efpr + n_none/2) / np, (n_eo + n_none/2) / np]
-    counts = df['Q201'].value_counts().reindex(
-        [1, 0, -1], fill_value=0
-    )
-    n_efnr = counts[-1]
-    n_none = counts[0]
-    n_x_or_y = counts[1]
-    prob['EFNR'] = [(n_x_or_y + n_none/2) / np, (n_efnr + n_none/2) / np]
-    print(prob)
-    # print(df[['Q10.20', 'Q201']].value_counts())
-    nx, ny, nz = 0, 0, 0
-    for i, row in df[['Q10.20', 'Q201']].iterrows():
-        if row['Q201'] == -1:
-            nz += 1
-        elif row['Q201'] == 0:
-            if row['Q10.20'] == 1:
-                nx += 1
-            elif row['Q10.20'] == -1:
-                ny += 1
+    grouped = df.groupby(criteria)
+    for tup, grp in grouped:
+        prob = pd.DataFrame()
+        counts = grp[trade_off_qs].value_counts().reindex(
+            [1, 0, -1], fill_value=0
+        )
+        n_efpr, n_none, n_eo = counts[1], counts[0], counts[-1]
+        print(tup, 'Total {:d} responses'.format(len(grp)))
+        print(n_efpr, n_none, n_eo)
+        np = sum(counts)
+        prob['EFPR'] = [(n_eo + n_none/2) / np, (n_efpr + n_none/2) / np]
+        prob['EO'] = [(n_efpr + n_none/2) / np, (n_eo + n_none/2) / np]
+        counts = grp[xz_trade_off_qs].value_counts().reindex(
+            [1, 0, -1], fill_value=0
+        )
+        n_efnr = counts[-1]
+        n_none = counts[0]
+        n_x_or_y = counts[1]
+        prob['EFNR'] = [(n_x_or_y + n_none/2) / np, (n_efnr + n_none/2) / np]
+        print(prob)
+        # print(df[[trade_off_qs, xz_trade_off_qs]].value_counts())
+        nx, ny, nz = 0, 0, 0
+        for i, row in grp[[trade_off_qs, xz_trade_off_qs]].iterrows():
+            if row[xz_trade_off_qs] == -1:
+                nz += 1
+            elif row[xz_trade_off_qs] == 0:
+                if row[trade_off_qs] == 1:
+                    nx += 1
+                elif row[trade_off_qs] == -1:
+                    ny += 1
+                else:
+                    nx += 1
+                    ny += 1
+                nz += 1
             else:
-                nx += 1
-                ny += 1
-            nz += 1
-        else:
-            if row['Q10.20'] == 1:
-                nx += 1
-            elif row['Q10.20'] == -1:
-                ny += 1
-            else:
-                nx += 1
-                ny += 1
-        # print(row)
-        # print(nx, ny, nz)
-    # print(nx/len(df), ny/len(df), nz/len(df))
+                if row[trade_off_qs] == 1:
+                    nx += 1
+                elif row[trade_off_qs] == -1:
+                    ny += 1
+                else:
+                    nx += 1
+                    ny += 1
+            # print(row)
+            # print(nx, ny, nz)
+        # print(nx/len(grp), ny/len(grp), nz/len(grp))
+
 
 if __name__ == "__main__":
 
     data_dir = 'data/processed/'
     out_dir = 'outputs'
-    batch = '09202021'
+    batch = '10082021'
     data_dir = os.path.join(data_dir, batch)
     out_dir = os.path.join(out_dir, batch)
     if not os.path.exists(out_dir): os.mkdir(out_dir)
-    fname = 'Pilot21_v2.0_10082021.csv'
+    fname = '10082021.csv'
+    criteria = ['scenario', 'STUDY_ID', 'x_first']
 
     config = load_config(data_dir)
     df = pd.read_csv(os.path.join(data_dir, fname), skiprows=SKIP_ROWS)
@@ -317,52 +295,45 @@ if __name__ == "__main__":
     # AWAITING REVIEW
     data_dir_ar = os.path.join(data_dir, AWAITING_REVIEW)
     merged = merge_demographics(df, data_dir_ar)
-    # allid = merged[PROLIFIC_PID]
-    # allid.sort_values()
-    # allid.to_csv(os.path.join(data_dir, 'all_id.csv'), sep='\t')
-    completed = merged[merged['entered_code'] == '19AE28A9']
+    completed = merged[merged['entered_code'] == COMPLETION_CODE]
+    completed.to_csv(os.path.join(data_dir, AWAITING_REVIEW,
+                                  fname.replace('.csv', '_completed.csv')))
     validate_completed_counts(completed, data_dir_ar)
     format_responses(completed, questions, data_dir_ar)
+
+    get_probabilities(completed, criteria)
 
     # APPROVED
     data_dir_ap = os.path.join(data_dir, APPROVED)
     if os.path.exists(data_dir_ap):
         merged = merge_demographics(df, data_dir_ap)
         approved = merged[merged['status'] == APPROVED]
+        print(approved[PROLIFIC_PID])
+        approved.to_csv(os.path.join(data_dir, APPROVED,
+                                     fname.replace('.csv', '_approved.csv')))
+
         validate_approved_counts(approved, data_dir_ap)
         format_responses(approved, questions, data_dir_ap)
 
         if not AWAITING_REVIEW in approved['status'].values:
-            cd_agg = get_aggregate(approved, CDS, privileged=None, verbose=False)
-            print(cd_agg)
+            cd_agg = get_cd_aggregate(approved, CDS, privileged=None,
+                                      verbose=False)
+            # print(cd_agg)
             cd_agg.to_csv(os.path.join(out_dir, 'cd_agg.tsv'), sep='\t')
 
-            cd_agg = get_aggregate(approved, CDS, privileged=True, verbose=False)
-            print(cd_agg)
+            cd_agg = get_cd_aggregate(approved, CDS, privileged=True,
+                                      verbose=False)
+            # print(cd_agg)
             cd_agg.to_csv(os.path.join(out_dir, 'cd_agg_priv.tsv'), sep='\t')
 
-            cd_agg = get_aggregate(approved, CDS, privileged=False, verbose=False)
-            print(cd_agg)
+            cd_agg = get_cd_aggregate(approved, CDS, privileged=False,
+                                      verbose=False)
+            # print(cd_agg)
             cd_agg.to_csv(os.path.join(out_dir, 'cd_agg_unpriv.tsv'), sep='\t')
 
-            get_probabilities(approved, 'icu')
-            get_probabilities(approved, 'frauth')
-            get_probabilities(approved, 'rent')
+            get_probabilities(approved, criteria)
 
             scenarios = approved['scenario'].value_counts().index
             for sc in scenarios:
                 sc_df = approved[approved['scenario'] == sc]
-                print(sc_df[[PROLIFIC_PID, 'scenario']])
-
-            whites = approved[approved['Ethnicity'] == 'White/Caucasian']
-            blacks = approved[approved['Ethnicity'] != 'White/Caucasian']
-            durations = approved['time_taken'].astype(int)
-            white_duration = whites['time_taken'].astype(int)
-            black_duration = blacks['time_taken'].astype(int)
-            print(durations.mean()/60)
-            print(durations.median()/60)
-            print(white_duration.mean()/60)
-            print(black_duration.mean()/60)
-            # print(approved[approved[PROLIFIC_PID] == '60dc0bcf44e3c6c623a104a5']
-            # ['time_taken'])
-            # 00:14:05
+                # print(sc_df[[PROLIFIC_PID, 'scenario']])
