@@ -1,8 +1,10 @@
 import matplotlib.pyplot as plt
+from summarizer import load_config
 import pandas as pd
 import numpy as np
+import os
 from constants import *
-from survey_info import CHOICES
+from survey_info import *
 
 results = {
     'Question 1': [10, 15, 17, 32, 26],
@@ -51,7 +53,7 @@ def plot_survey(results, category_names):
     return fig, ax
 
 
-def plot_distribution(df, criteria, config):
+def plot_distribution(df, criteria):
     df = df.copy()
     trade_off_qs = 'Q10.20'
     xz_trade_off_qs = 'Q201'
@@ -64,12 +66,14 @@ def plot_distribution(df, criteria, config):
         percentages[tup] = counts.reindex(category_names, fill_value=0)
         tups = ''
         for t in tup:
-            if t == config[MAJ_STD_ID]:
-                tups += 'maj_'
-            elif t == config[MIN_STD_ID]:
-                tups += 'min_'
-            else:
-                tups += str(t) + '_'
+            tups += str(STUDY_MAP.get(t, t)) + '_'
         d[tups] = percentages[tup].values.tolist()
     plot_survey(d, category_names)
     plt.tight_layout()
+
+
+if __name__ == "__main__":
+    response = pd.read_csv(os.path.join('data', 'processed', 'response.csv'))
+    criteria = ['scenario', STUDY_ID, 'x_first']
+    plot_distribution(response, criteria)
+    # plot_survey(response, criteria)
