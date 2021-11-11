@@ -22,15 +22,26 @@ CD_QS = {
 CDS = ['IFPI', None, 'IFNI', None, 'SFPI', None, 'SFNI', None,
        'AB', 'DB', 'DT', 'PGM']
 CHOICES = {'Q10.20': ['Definitely model X', 'Probably model X',
-                      'Netiher model X not model Y',
+                      'Neither model X nor model Y',
                       'Probably model Y', 'Definitely model Y'],
             'Q10.14': ['Definitely model X', 'Probably model X',
                       'Models X and Y are equally fair',
                       'Probably model Y', 'Definitely model Y'],
-           'Q201': ['Definitely ${e://Field/pref_model}',
+           'Q10.16': ['Definitely model X', 'Probably model X',
+                      'Models X and Y are equally biased',
+                      'Probably model Y', 'Definitely model Y'],
+           'Q10.18': ['Definitely model X', 'Probably model X',
+                      'Models X and Y are equally useful',
+                      'Probably model Y', 'Definitely model Y'],
+           'Q199': ['Definitely ${e://Field/pref_model}',
+                     'Probably ${e://Field/pref_model}',
+                     'Both ${e://Field/pref_model} and Z are equally fair',
+                     'Probably model Z', 'Definitely model Z'],
+            'Q201': ['Definitely ${e://Field/pref_model}',
                     'Probably ${e://Field/pref_model}',
-                    'Netiher ${e://Field/pref_model} nor model Z',
-                    'Probably model Z', 'Definitely model Z']
+                    'Neither ${e://Field/pref_model} nor model Z',
+                    'Probably model Z', 'Definitely model Z'],
+           'CD': ['High', 'Moderate', 'Low']
            }
 
 ETHNICITY_MAP = {'White/Caucasian': 'Maj',
@@ -40,6 +51,9 @@ ETHNICITY_MAP = {'White/Caucasian': 'Maj',
 STUDY_MAP = {'615f94f07f89d7a8afda6025': 'Maj',
              '614391dcdf09127f013fe60a': 'Maj',
              '615f943ec32164d0f282bd34': 'Min',
-             '61439223ecf74e491e22a39c': 'Min'
+             '61439223ecf74e491e22a39c': 'Min',
+             '617f102667bd25701aa8461e': 'Maj',
+             '617f10dcb9390b6c13530629': 'Min'
              }
+
 

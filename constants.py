@@ -12,3 +12,25 @@ SKIP_ROWS = [2]
 
 COMPLETION_CODE = '19AE28A9'
 
+TEX_TABLE = """
+\\begin{{table}}[h]
+    \\centering
+    \\begin{{tabular}}{{|{:s}|}}
+        \\hline
+        {:s} & EFPR & EO & EFNR & n & p-value\\\\
+        \\hline
+        {:s}
+        \\hline
+    \\end{{tabular}}
+    \\caption{{Grouped by {:s}}}
+    \\label{{tab:my_label}}
+\\end{{table}}"""
+
+TEX_FIGURE = """
+\\begin{{figure}}[h]
+    \\centering
+    \\includegraphics[width=0.8\\textwidth]{{figures/{:s}/{:s}/{:s}}}
+    \\caption{{Grouped by {:s}}}
+    \\label{{fig:my_label}}
+\\end{{figure}}
+"""

@@ -1,8 +1,9 @@
 import pandas as pd
 import os
-import numpy as np
+import argparse
 from constants import *
 from survey_info import *
+
 
 def expired_data_handler(data):
     data = data.copy(deep=True)
@@ -15,12 +16,27 @@ def expired_data_handler(data):
     return data
 
 
+def correct_errors(df):
+    df = df.replace({
+        'Q10.20': {'Netiher model X not model Y':
+                       'Neither model X nor model Y'},
+        'Q201': {'Netiher ${e://Field/pref_model} nor model Z':
+            'Neither ${e://Field/pref_model} nor model Z'}
+    })
+    return df
+
+
 def aggregate_response(data_dirs, fnames):
     dfs = []
     for i, data_dir in enumerate(data_dirs):
         fname = os.path.join('data', 'processed', data_dir,
-                             'approved', fnames[i])
+                             'APPROVED', fnames[i])
         df = pd.read_csv(fname, index_col=0)
+        df = correct_errors(df)
+        df = df.replace({'Ethnicity': ETHNICITY_MAP})
+        df = expired_data_handler(df)
+
+        print(df['Ethnicity'].value_counts())
         dfs.append(df)
 
     data = pd.concat(dfs, axis=0)
@@ -28,7 +44,7 @@ def aggregate_response(data_dirs, fnames):
     return data
 
 
-def prepare_causal_data(df):
+def prepare_causal_data(df, verbose=False):
     """
         - Convert CD responses to CD columns
         - Convert Ethnicity to PGM columns
@@ -42,9 +58,10 @@ def prepare_causal_data(df):
     df = df.replace({'Q10.20': dict(zip(CHOICES['Q10.20'], [1, 1, 0, -1, -1]))})
     variables = [cd for cd in CDS if cd is not None] + \
                 ['EFPR', 'EO', 'frauth', 'icu', 'rent']
-    print(variables)
     rows = []
-    print(df[df['scenario'] == 'frauth']['Q10.20'].value_counts())
+    if verbose:
+        print(variables)
+        print(df[df['scenario'] == 'frauth']['Q10.20'].value_counts())
     for index, row in df.iterrows():
         scenario = row['scenario']
         q_ids = CD_QS[scenario]
@@ -78,19 +95,32 @@ def prepare_causal_data(df):
     causal_df = causal_df.replace({'DT': {'Yes': 'High', 'No': 'Low'}})
     causal_df = causal_df.replace({'Yes': 1, 'No': 0})
     causal_df = causal_df.replace({'Moderate': 'Med'})
-    print(causal_df['DT'])
 
     return causal_df
 
 
 if __name__ == "__main__":
-    data_dirs = ['10082021']
-    fnames = ['10082021']
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data-dirs', nargs="*", default=['10312021'])
+    parser.add_argument('--fnames', nargs="*", default=['10312021'])
+    args = parser.parse_args()
+
+    data_dirs = args.data_dirs
+    fnames = args.fnames
+    """
+    data_dirs = ['09202021', '10082021', '10312021']
+    data_dirs = [data_dirs[-1]]
+    fnames = ['Pilot21_v2.0_10082021', '10082021', '10312021']
+    fnames = [fnames[-1]]
+    """
     fnames = [f + '_approved.csv' for f in fnames]
 
     df = aggregate_response(data_dirs, fnames)
-    df = expired_data_handler(df)
-    # df.to_csv(os.path.join('data', 'processed', 'response.csv'))
 
     causal_df = prepare_causal_data(df)
     causal_df.to_csv(os.path.join('data', 'processed', 'causal_df.csv'))
+
+    causal_df.index.name=PROLIFIC_PID
+    df.set_index(PROLIFIC_PID, inplace=True)
+
+    df.to_csv(os.path.join('data', 'processed', 'response.csv'))

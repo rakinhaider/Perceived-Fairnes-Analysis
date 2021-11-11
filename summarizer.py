@@ -1,7 +1,8 @@
+import numpy as np
 import pandas as pd
 import os
 from collections import defaultdict
-
+import codecs
 from constants import *
 from survey_info import *
 from survey_info import CHOICES
@@ -17,11 +18,13 @@ def load_demographic(std_id, data_dir):
 def load_config(data_dir):
     config = pd.read_csv(os.path.join(data_dir, 'config'),
                          sep='\t', index_col=0, squeeze=True, header=None)
-    if not pd.isna(config['SKIP_ROWS']):
-        global SKIP_ROWS
-        SKIP_ROWS = SKIP_ROWS + config['SKIP_ROWS'].split(',')
-        SKIP_ROWS = [int(s) for s in SKIP_ROWS]
-
+    config['SKIP_ROWS'] = eval(config.at['SKIP_ROWS'])
+    config[MAJ_RESP_COUNT] = int(config[MAJ_RESP_COUNT])
+    config[MIN_RESP_COUNT] = int(config[MIN_RESP_COUNT])
+    if config.notna()[MAJ_APPROVED]:
+        config[MAJ_APPROVED] = int(config[MAJ_APPROVED])
+    if config.notna()[MAJ_APPROVED]:
+        config[MIN_APPROVED] = int(config[MIN_APPROVED])
     return config
 
 
@@ -64,7 +67,7 @@ def validate_completed_counts(df, data_dir):
               std_id, len(group_df), count)
         ids = group_df[PROLIFIC_PID].sort_values()
         ids.to_csv(os.path.join(data_dir, std_id + '_ids.tsv'), sep='\t')
-        assert len(group_df) == int(count)
+        assert len(group_df) == count
         assert all(group_df[PROLIFIC_PID].value_counts() == 1)
 
 
@@ -79,11 +82,11 @@ def validate_approved_counts(df, data_dir):
               std_id, len(group_df), count)
         ids = group_df[PROLIFIC_PID].sort_values()
         ids.to_csv(os.path.join(data_dir, std_id + '_ids.tsv'), sep='\t')
-        assert len(group_df) == int(count)
+        assert len(group_df) == count
         assert all(group_df[PROLIFIC_PID].value_counts() == 1)
 
 
-def format_responses(df, questions, data_dir):
+def format_responses(df, questions, data_dir, verbose=False):
     correct_count = {}
     for index, row in df.iterrows():
         pid = row[PROLIFIC_PID]
@@ -99,7 +102,7 @@ def format_responses(df, questions, data_dir):
             correct_count[study_id] = defaultdict(list)
 
         fname = os.path.join(fname, pid + '.txt')
-        with open(fname, 'w') as f:
+        with codecs.open(fname, 'w', encoding='utf-8') as f:
             s = '{}: {}\n'.format(PROLIFIC_PID, row[PROLIFIC_PID])
             s += '{}: {}\n'.format(STUDY_ID, row[STUDY_ID])
             s += '{}: {}\n'.format('scenario', row['scenario'])
@@ -145,6 +148,13 @@ def format_responses(df, questions, data_dir):
             f.write(s)
             f.flush()
 
+    if verbose:
+        for std_id in correct_count:
+            print(STUDY_ID, std_id)
+            for count in sorted(correct_count[std_id].keys()):
+                print('Correct Count:', count)
+                print(*sorted(correct_count[std_id][count]), sep='\n')
+
 
 def get_cd_aggregate(df, cds, study_id, verbose=False):
     grouped = df.groupby(by=['scenario'], axis=0)
@@ -184,55 +194,62 @@ def get_cd_aggregate(df, cds, study_id, verbose=False):
     return cd_dataframe
 
 
-def get_probabilities(df, criteria):
+def get_probabilities(df, criteria,
+                      xy_qs='Q10.20',
+                      xz_qid='Q201'):
     df = df.copy()
-    trade_off_qs = 'Q10.14'
-    xz_trade_off_qs = 'Q201'
-    df = df.replace({
-        trade_off_qs: dict(zip(CHOICES[trade_off_qs], [1, 1, 0, -1, -1]))
-    })
-    df = df.replace({
-        xz_trade_off_qs: dict(zip(CHOICES[xz_trade_off_qs], [1, 1, 0, -1, -1]))
-    })
-
-    grouped = df.groupby(criteria, dropna=False)
+    grouped = df.groupby(criteria)
+    res = pd.DataFrame(columns=['EFPR', 'EO', 'EFNR', 'n'])
     for tup, grp in grouped:
         prob = pd.DataFrame()
-        counts = grp[trade_off_qs].value_counts().reindex(
+        grp = grp.replace({
+            xy_qs: dict(zip(CHOICES[xy_qs], [1, 1, 0, -1, -1]))
+        })
+        grp = grp.replace({
+            xz_qid: dict(
+                zip(CHOICES[xz_qid], [1, 1, 0, -1, -1]))
+        })
+
+        counts = grp[xy_qs].value_counts().reindex(
             [1, 0, -1], fill_value=0
         )
+        # print(grp[trade_off_qs].value_counts())
         n_efpr, n_none, n_eo = counts[1], counts[0], counts[-1]
         print(tup, 'Total {:d} responses'.format(len(grp)))
         print(n_efpr, n_none, n_eo)
         np = sum(counts)
         prob['EFPR'] = [(n_eo + n_none/2) / np, (n_efpr + n_none/2) / np]
         prob['EO'] = [(n_efpr + n_none/2) / np, (n_eo + n_none/2) / np]
-        counts = grp[xz_trade_off_qs].value_counts().reindex(
+        counts = grp[xz_qid].value_counts().reindex(
             [1, 0, -1], fill_value=0
         )
         n_efnr = counts[-1]
         n_none = counts[0]
         n_x_or_y = counts[1]
+        print(n_x_or_y, n_none, n_efnr)
         prob['EFNR'] = [(n_x_or_y + n_none/2) / np, (n_efnr + n_none/2) / np]
-        print(prob)
+        res = res.append(pd.Series({'EFPR': prob.loc[1]['EFPR'],
+                                    'EO': prob.loc[1]['EO'],
+                                    'EFNR': prob.loc[1]['EFNR'],
+                                    'n': len(grp)}, name=tup))
         # print(df[[trade_off_qs, xz_trade_off_qs]].value_counts())
         nx, ny, nz = 0, 0, 0
-        for i, row in grp[[trade_off_qs, xz_trade_off_qs]].iterrows():
-            if row[xz_trade_off_qs] == -1:
+        for i, row in grp[[xy_qs, xz_qid]].iterrows():
+            if row[xz_qid] == -1:
                 nz += 1
-            elif row[xz_trade_off_qs] == 0:
-                if row[trade_off_qs] == 1:
+            elif row[xz_qid] == 0:
+                if row[xy_qs] == 1:
                     nx += 1
-                elif row[trade_off_qs] == -1:
+                elif row[xy_qs] == -1:
                     ny += 1
                 else:
                     nx += 1
                     ny += 1
                 nz += 1
             else:
-                if row[trade_off_qs] == 1:
+                if row[xy_qs] == 1:
                     nx += 1
-                elif row[trade_off_qs] == -1:
+                elif row[xy_qs] == -1:
                     ny += 1
                 else:
                     nx += 1
@@ -240,6 +257,7 @@ def get_probabilities(df, criteria):
             # print(row)
             # print(nx, ny, nz)
         # print(nx/len(grp), ny/len(grp), nz/len(grp))
+    return res
 
 
 def get_pgm(row):
@@ -247,24 +265,33 @@ def get_pgm(row):
         if isinstance(row[col], str):
             return row[col]
 
-    exit(1)
+    # print(row[PROLIFIC_PID])
 
 
 if __name__ == "__main__":
-
     data_dir = 'data/processed/'
     out_dir = 'outputs'
-    batch = '10082021'
+    batch = '10312021'
     data_dir = os.path.join(data_dir, batch)
     out_dir = os.path.join(out_dir, batch)
     if not os.path.exists(out_dir): os.mkdir(out_dir)
-    fname = '10082021.csv'
+    fname = '10312021.csv'
     criteria = ['scenario', 'STUDY_ID', 'x_first']
 
     config = load_config(data_dir)
     df = pd.read_csv(os.path.join(data_dir, fname), skiprows=SKIP_ROWS)
+    for index in config['SKIP_ROWS']:
+        index = index - 3
+        row = df.loc[index]
+        print(row[PROLIFIC_PID])
+        if row[STUDY_ID] == config[MAJ_STD_ID]:
+            config[MAJ_RESP_COUNT] -= 1
+        else:
+            config[MIN_RESP_COUNT] -= 1
+        df.drop(index=[index], inplace=True)
     questions = {c: df.iloc[0][c] for c in df.columns}
     df.drop(index=0, axis=0, inplace=True)
+    df['PGM'] = df.apply(get_pgm, axis=1)
     keep_latest_from_pid(df)
 
     # AWAITING REVIEW
@@ -274,23 +301,37 @@ if __name__ == "__main__":
     completed.to_csv(os.path.join(data_dir, AWAITING_REVIEW,
                                   fname.replace('.csv', '_completed.csv')))
     validate_completed_counts(completed, data_dir_ar)
-    format_responses(completed, questions, data_dir_ar)
+    format_responses(completed, questions, data_dir_ar, verbose=False)
 
-    # get_probabilities(completed, criteria)
+
+    if True:
+        print(completed)
+        criteria = ['scenario']
+        print('Criteria:', criteria)
+        get_probabilities(completed, criteria)
+        criteria = ['scenario', 'group', STUDY_ID]
+        print('Criteria:', criteria)
+        get_probabilities(completed, criteria)
+        criteria = ['scenario', 'PGM']
+        print('Criteria:', criteria)
+        get_probabilities(completed, criteria)
+        criteria = ['scenario', STUDY_ID]
+        print('Criteria:', criteria)
+        get_probabilities(completed, criteria)
 
     # APPROVED
     data_dir_ap = os.path.join(data_dir, APPROVED)
     if os.path.exists(data_dir_ap):
         merged = merge_demographics(df, data_dir_ap)
         approved = merged[merged['status'] == APPROVED]
+        print(completed['PGM'])
         approved.to_csv(os.path.join(data_dir, APPROVED,
                                      fname.replace('.csv', '_approved.csv')))
 
         validate_approved_counts(approved, data_dir_ap)
         format_responses(approved, questions, data_dir_ap)
 
-        pgm = approved.apply(get_pgm, axis=1)
-        approved['PGM'] = pgm
+
         if not AWAITING_REVIEW in approved['status'].values:
             cd_agg = get_cd_aggregate(approved, CDS, study_id=None)
             cd_agg.to_csv(os.path.join(out_dir, 'cd_agg.tsv'), sep='\t')
@@ -302,6 +343,12 @@ if __name__ == "__main__":
                     out_dir, 'cd_agg_{:s}.tsv'.format(s)), sep='\t')
 
             print(approved)
+            criteria = ['scenario']
+            print('Criteria:', criteria)
+            get_probabilities(approved, criteria)
+            criteria = ['scenario', 'group', STUDY_ID]
+            print('Criteria:', criteria)
+            get_probabilities(approved, criteria)
             criteria = ['scenario', 'PGM']
             print('Criteria:', criteria)
             get_probabilities(approved, criteria)

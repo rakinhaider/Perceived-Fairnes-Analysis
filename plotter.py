@@ -1,9 +1,8 @@
 import matplotlib.pyplot as plt
-from summarizer import load_config
 import pandas as pd
 import numpy as np
 import os
-from constants import *
+import argparse
 from survey_info import *
 
 results = {
@@ -16,7 +15,7 @@ results = {
 }
 
 
-def plot_survey(results, category_names):
+def plot_survey(results, category_names, stats=None):
     """
     Parameters
     ----------
@@ -47,33 +46,56 @@ def plot_survey(results, category_names):
         r, g, b, _ = color
         text_color = 'white' if r * g * b < 0.5 else 'darkgrey'
         # ax.bar_label(rects, label_type='center', color=text_color)
-    ax.legend(ncol=len(category_names), bbox_to_anchor=(0, 1),
+    ax.legend(ncol=3, bbox_to_anchor=(0, 1),
               loc='lower left', fontsize='small')
 
+    if stats is not None:
+        twin = ax.twinx()
+        twin.tick_params(left=False, right=True, labelright=True)
+        twin.set_ylim(ax.get_ylim())
+        twin.set_yticks(ax.get_yticks())
+        twin.set_yticklabels(
+            ["{:.3f}".format(v) for v in stats['pvalue'].values])
+    fig.tight_layout()
     return fig, ax
 
 
-def plot_distribution(df, criteria):
+def plot_distribution(df, criteria,
+                      xy_qs='Q10.20', stats=None):
     df = df.copy()
-    trade_off_qs = 'Q10.20'
-    xz_trade_off_qs = 'Q201'
-    category_names = CHOICES[trade_off_qs]
+
+    category_names = CHOICES[xy_qs]
     grouped = df.groupby(criteria)
     percentages = pd.DataFrame()
     d = {}
     for tup, grp in grouped:
-        counts = grp[trade_off_qs].value_counts() / len(grp)
+        if not isinstance(tup, tuple):
+            tup = tuple([tup])
+        counts = grp[xy_qs].value_counts() / len(grp)
         percentages[tup] = counts.reindex(category_names, fill_value=0)
         tups = ''
-        for t in tup:
-            tups += str(STUDY_MAP.get(t, t)) + '_'
+        for i, t in enumerate(tup):
+            tups += str(STUDY_MAP.get(t, t))
+            if i != len(tup) - 1: tups += '_'
         d[tups] = percentages[tup].values.tolist()
-    plot_survey(d, category_names)
+    plot_survey(d, category_names, stats)
     plt.tight_layout()
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data-dirs', nargs="*", default=['10312021'])
+    parser.add_argument('--qid', default='Q10.20')
+    parser.add_argument('--criteria', nargs="*", default=['scenario'])
+    args = parser.parse_args()
     response = pd.read_csv(os.path.join('data', 'processed', 'response.csv'))
-    criteria = ['scenario', STUDY_ID, 'x_first']
-    plot_distribution(response, criteria)
+    trade_off_qs = args.qid
+    criteria = args.criteria
+    plot_distribution(response, criteria, xy_qs=trade_off_qs)
     # plot_survey(response, criteria)
+    out_dir = 'outputs'
+    out_dir = os.path.join(out_dir, '_'.join(args.data_dirs))
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+    fname = '_'.join([trade_off_qs] + criteria) + '.pdf'
+    plt.savefig(os.path.join(out_dir, fname), format='pdf')
