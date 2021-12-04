@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from survey_info import CHOICES, CDS, CD_QS
+from combine import get_parser
+from survey_response_aggregator import aggregate_response
 
 
 def plot_heatmap(data, x, y, x_is_cd=True):
@@ -50,24 +52,43 @@ def get_heatmap_data(df, x, y):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv(os.path.join('data/processed', 'response.csv'))
+
+    args = get_parser().parse_args()
+    print(args.resp_dirs)
+    fnames = args.fnames
+    fnames = [f + '_approved.csv' for f in fnames]
+    response = aggregate_response(args.resp_dirs, fnames)
 
     x, y = 'Q10.14', 'Q10.20'
-    data = get_heatmap_data(df, x, y)
+    data = get_heatmap_data(response, x, y)
     plot_heatmap(np.array(data), x, y, False)
+    plt.show()
 
-    for sc in ['icu', 'frauth']:
+    x, y = 'Q10.16', 'Q10.20'
+    data = get_heatmap_data(response, x, y)
+    plot_heatmap(np.array(data), x, y, False)
+    plt.show()
+
+    x, y = 'Q10.18', 'Q10.20'
+    data = get_heatmap_data(response, x, y)
+    plot_heatmap(np.array(data), x, y, False)
+    plt.show()
+
+    for sc in ['icu', 'frauth', 'rent']:
         for cd in CDS[:8]:
             if cd is None:
                 continue
             index = CDS.index(cd)
             x = CD_QS[sc][index]
-            y = 'Q10.20'
-            data = get_heatmap_data(df[df['scenario'] == sc], x, y)
-            plot_heatmap(data, cd, y, True)
-            out_dir = os.path.join('outputs/10312021/heatmaps', sc)
-            os.makedirs(out_dir, exist_ok=True)
-            plt.savefig(
-                os.path.join(out_dir, '{:s}_vs_{:s}'.format(cd, y)+'.pdf'),
-                format='pdf')
-            plt.show()
+            for y in ['Q10.20', 'Q10.14', 'Q199', 'Q201']:
+                data = get_heatmap_data(
+                    response[response['scenario'] == sc], x, y)
+                plot_heatmap(data, cd, y, True)
+                out_dir = os.path.join('outputs', "_".join(args.resp_dirs),
+                                       'heatmaps', sc, y)
+                os.makedirs(out_dir, exist_ok=True)
+                plt.savefig(os.path.join(
+                    out_dir, '{:s}_vs_{:s}'.format(cd, y) + '.pdf'),
+                    format='pdf')
+                plt.close()
+                # plt.show(block=False)

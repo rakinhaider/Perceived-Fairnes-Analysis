@@ -7,6 +7,8 @@ from constants import *
 from survey_info import *
 from survey_info import CHOICES
 
+TIMED_OUTS = 'TIMED_OUTS'
+
 
 def load_demographic(std_id, data_dir):
     fname = os.path.join(data_dir, 'prolific_export_{}.csv'.format(std_id))
@@ -25,6 +27,11 @@ def load_config(data_dir):
         config[MAJ_APPROVED] = int(config[MAJ_APPROVED])
     if config.notna()[MAJ_APPROVED]:
         config[MIN_APPROVED] = int(config[MIN_APPROVED])
+    if config.get(TIMED_OUTS, None) == None:
+        config[('%s' % TIMED_OUTS)] = []
+    else:
+        config[TIMED_OUTS] = eval(config[TIMED_OUTS])
+        config[TIMED_OUTS] = [i - 3 for i in config[TIMED_OUTS]]
     return config
 
 
@@ -201,6 +208,8 @@ def get_probabilities(df, criteria,
     grouped = df.groupby(criteria)
     res = pd.DataFrame(columns=['EFPR', 'EO', 'EFNR', 'n'])
     for tup, grp in grouped:
+        if not isinstance(tup, tuple):
+            tup = (tup,)
         prob = pd.DataFrame()
         grp = grp.replace({
             xy_qs: dict(zip(CHOICES[xy_qs], [1, 1, 0, -1, -1]))
@@ -265,21 +274,8 @@ def get_pgm(row):
         if isinstance(row[col], str):
             return row[col]
 
-    # print(row[PROLIFIC_PID])
 
-
-if __name__ == "__main__":
-    data_dir = 'data/processed/'
-    out_dir = 'outputs'
-    batch = '10312021'
-    data_dir = os.path.join(data_dir, batch)
-    out_dir = os.path.join(out_dir, batch)
-    if not os.path.exists(out_dir): os.mkdir(out_dir)
-    fname = '10312021.csv'
-    criteria = ['scenario', 'STUDY_ID', 'x_first']
-
-    config = load_config(data_dir)
-    df = pd.read_csv(os.path.join(data_dir, fname), skiprows=SKIP_ROWS)
+def drop_skip_rows(df):
     for index in config['SKIP_ROWS']:
         index = index - 3
         row = df.loc[index]
@@ -289,6 +285,22 @@ if __name__ == "__main__":
         else:
             config[MIN_RESP_COUNT] -= 1
         df.drop(index=[index], inplace=True)
+    return df
+
+
+if __name__ == "__main__":
+    data_dir = 'data/processed/'
+    out_dir = 'outputs'
+    batch = '11092021'
+    data_dir = os.path.join(data_dir, batch)
+    out_dir = os.path.join(out_dir, batch)
+    if not os.path.exists(out_dir): os.mkdir(out_dir)
+    fname = '11092021.csv'
+    criteria = ['scenario', 'STUDY_ID', 'x_first']
+
+    config = load_config(data_dir)
+    df = pd.read_csv(os.path.join(data_dir, fname), skiprows=SKIP_ROWS)
+    df = drop_skip_rows(df)
     questions = {c: df.iloc[0][c] for c in df.columns}
     df.drop(index=0, axis=0, inplace=True)
     df['PGM'] = df.apply(get_pgm, axis=1)
@@ -297,11 +309,12 @@ if __name__ == "__main__":
     # AWAITING REVIEW
     data_dir_ar = os.path.join(data_dir, AWAITING_REVIEW)
     merged = merge_demographics(df, data_dir_ar)
-    completed = merged[merged['entered_code'] == COMPLETION_CODE]
+    completed = merged[(merged['entered_code'] == COMPLETION_CODE) |
+                       merged.index.isin(config[TIMED_OUTS])]
     completed.to_csv(os.path.join(data_dir, AWAITING_REVIEW,
                                   fname.replace('.csv', '_completed.csv')))
     validate_completed_counts(completed, data_dir_ar)
-    format_responses(completed, questions, data_dir_ar, verbose=False)
+    format_responses(completed, questions, data_dir_ar, verbose=True)
 
 
     if True:
@@ -324,7 +337,6 @@ if __name__ == "__main__":
     if os.path.exists(data_dir_ap):
         merged = merge_demographics(df, data_dir_ap)
         approved = merged[merged['status'] == APPROVED]
-        print(completed['PGM'])
         approved.to_csv(os.path.join(data_dir, APPROVED,
                                      fname.replace('.csv', '_approved.csv')))
 

@@ -1,13 +1,15 @@
 #!/bin/bash
 
-data_dirs='10082021'
-fnames='10082021'
-qid='Q10.14'
-xz_qid='Q199'
-criteria='scenario Ethnicity'
+resp_dirs='09202021 10082021 10312021 11092021'
+# resp_dirs='10312021 11092021'
+fnames='Pilot21_v2.0_10082021 10082021 10312021 11092021'
+# fnames='10312021 11092021'
+qid='Q10.20'
+xz_qid='Q201'
+criteria='scenario'
 what='choice'
 
-#python -m survey_response_aggregator --data-dirs ${data_dirs}\
+#python -m survey_response_aggregator --resp-dirs ${resp_dirs}\
 #	--fnames ${fnames}
 
 #echo "#######################################################"
@@ -20,7 +22,16 @@ what='choice'
 
 #echo "#######################################################"
 
-#python -m plotter --qid ${qid} --criteria ${criteria} --data-dirs ${data_dirs}
+#python -m plotter --qid ${qid} --criteria ${criteria} --resp-dirs ${resp_dirs}
 
 python -m combine --qid ${qid} --xz-qid ${xz_qid} --criteria ${criteria}\
-	--data-dirs ${data_dirs} --fnames ${fnames} --what ${what}
+	--resp-dirs ${resp_dirs} --fnames ${fnames} --what ${what}
+
+python -m combine --criteria ${criteria} --resp-dirs ${resp_dirs}\
+ 	--fnames ${fnames} --what 'model_fair'
+
+python -m combine --criteria ${criteria} --resp-dirs ${resp_dirs}\
+ 	--fnames ${fnames} --what 'model_bias'
+
+python -m combine --criteria ${criteria} --resp-dirs ${resp_dirs}\
+ 	--fnames ${fnames} --what 'cd'
