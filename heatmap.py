@@ -45,9 +45,10 @@ def get_heatmap_data(df, x, y):
         choices = CHOICES[x]
     for c in choices:
         selected = df[df[x] == c]
-        counts = selected[y].value_counts()
-        counts = counts.reindex(CHOICES[y], fill_value=0)
-        data.append(list(counts.values))
+        # percentages = selected[y].value_counts() / len(selected)
+        percentages = selected[y].value_counts()
+        percentages = percentages.reindex(CHOICES[y], fill_value=0)
+        data.append(list(percentages.values))
     return np.array(data).transpose()
 
 
@@ -74,6 +75,7 @@ if __name__ == "__main__":
     plot_heatmap(np.array(data), x, y, False)
     plt.show()
 
+    criteria = args.criteria
     for sc in ['icu', 'frauth', 'rent']:
         for cd in CDS[:8]:
             if cd is None:
