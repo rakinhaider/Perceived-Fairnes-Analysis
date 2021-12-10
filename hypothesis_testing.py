@@ -1,10 +1,12 @@
+import itertools
+from collections import defaultdict
 import numpy as np
-from scipy.stats import wilcoxon, chisquare
+from scipy.stats import wilcoxon, chisquare, kendalltau
 import pandas as pd
-import os
+from utils import get_parser, aggregate_response, merge_cd_columns
 from survey_info import *
-import argparse
-
+from itertools import combinations
+from statsmodels.stats.proportion import proportions_ztest
 
 def run_wilcoxon(response, by, grp_criteria):
     grouped = response.groupby(grp_criteria)
@@ -76,20 +78,52 @@ def run_cd_test(response, grp_criteria):
         print(*['{:.3f}'.format(float(v)) for _, _, v in cd_stats], sep='\t')
 
 
+def run_freq_difference_test(f1, f2):
+    f1 = defaultdict(int, f1)
+    f2 = defaultdict(int, f2)
+    vocab = set(list(f1.keys()) + list(f2.keys()))
+    print(len(vocab))
+    f1_total = sum(f1.values())
+    f2_total = sum(f2.values())
+    print(f1_total, f2_total)
+    scores = []
+    for w in vocab:
+        success = [f1[w], f2[w]]
+        size = [f1_total, f2_total]
+        # print(w, success, size)
+        zstat, p_value = proportions_ztest(count=success, nobs=size,
+                                           alternative='larger')
+        scores.append([w, zstat, p_value, f1[w], f2[w]])
+
+    scores.sort(key=lambda x: (x[2], x[0], x[1]))
+    return pd.DataFrame(scores, columns=['word', 'zstat', 'pvalue',
+                                         'f1_count', 'f2_count'])
+
+
+def run_kendall_test(response, x, y):
+    x_choices = CHOICES['CD'] if x not in CHOICES else CHOICES[x]
+    y_choices = CHOICES['CD'] if y not in CHOICES else CHOICES[y]
+
+    response = response.replace({
+        x: dict(zip(x_choices, range(len(x_choices))))
+    })
+    response = response.replace({
+        y: dict(zip(y_choices[::-1], range(len(y_choices))))
+    })
+    stats = kendalltau(response[x], response[y], variant='c')
+    print(stats)
+    return stats
+
+
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--qid', default='Q10.20')
-    parser.add_argument('--criteria', nargs="*", default=['scenario'])
-    parser.add_argument('--what', default='choice',
-                        choices=['choice', 'cd', 'model_fair', 'model_bias'])
+    parser = get_parser()
     args = parser.parse_args()
-
-    response = pd.read_csv(os.path.join('data', 'processed', 'response.csv'),
-                           index_col=0)
 
     xvsy_qid = args.qid
     grouping_criteria = args.criteria
+    fnames = [f + "_approved.csv" for f in args.fnames]
+    response = aggregate_response(args.resp_dirs, fnames)
 
     if args.what == 'choice':
         print(run_choice_test(response, xvsy_qid, grouping_criteria))
@@ -99,3 +133,9 @@ if __name__ == "__main__":
         print(run_model_property_test(response, 'fair', grouping_criteria))
     elif args.what == 'model_bias':
         print(run_model_property_test(response, 'bias', grouping_criteria))
+    elif args.what == 'kendall':
+        response = merge_cd_columns(response)
+        print(run_kendall_test(response, 'Q10.20', 'IFPI'))
+        print(run_kendall_test(response, 'Q10.20', 'SFPI'))
+        print(run_kendall_test(response, 'Q201', 'IFNI'))
+        print(run_kendall_test(response, 'Q201', 'SFNI'))

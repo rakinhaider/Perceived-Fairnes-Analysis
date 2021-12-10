@@ -1,24 +1,8 @@
-import argparse
-import os
 from summarizer import get_probabilities
-from survey_response_aggregator import aggregate_response
 from hypothesis_testing import *
 from plotter import *
 from constants import TEX_TABLE, TEX_FIGURE
-
-
-def get_parser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--qid', default='Q10.20')
-    parser.add_argument('--xz-qid', default='Q201')
-    parser.add_argument('--criteria', nargs="*", default=['scenario'])
-    parser.add_argument('--resp-dirs', nargs="*", default=['10312021'])
-    parser.add_argument('--fnames', nargs="*", default=['10312021'])
-    parser.add_argument('--what', default='choice', choices=['choice', 'cd',
-                                                             'model_fair',
-                                                             'model_bias'])
-    return parser
-
+from utils import get_parser, aggregate_response
 
 if __name__ == "__main__":
 

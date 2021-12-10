@@ -4,10 +4,9 @@ import matplotlib
 def set_rcparams(**kwargs):
     fontsize = kwargs.get('fontsize', 9)
     params = {
-        'text.usetex': True,
         'pdf.fonttype': 42,
         "font.family": "serif",
-        "font.serif": "Libertine",
+        "font.serif": "Linux Libertine",
         "font.size": fontsize,
         "axes.labelsize": fontsize,
         "axes.titlesize": 'medium',
@@ -16,6 +15,11 @@ def set_rcparams(**kwargs):
         "mathtext.fontset": 'cm',
         "mathtext.default": 'bf',
         # "figure.figsize": set_size(width, fraction)
+        "text.usetex": True,
+        'text.latex.preamble': r"""
+            \usepackage{libertine}
+            \usepackage[libertine]{newtxmath}
+        """
     }
     if kwargs.get('titlepad') is not None:
         params["axes.titlepad"] = kwargs.get('titlepad')
@@ -24,6 +28,7 @@ def set_rcparams(**kwargs):
     if kwargs.get('markersize') is not None:
         params["lines.markersize"] = kwargs.get('markersize')
     matplotlib.rcParams.update(params)
+    print(matplotlib.rcParams.get('font.size'))
 
 
 # Source: https://tobiasraabe.github.io/blog/matplotlib-for-publications.html

@@ -3,45 +3,7 @@ import os
 import argparse
 from constants import *
 from survey_info import *
-
-
-def expired_data_handler(data):
-    data = data.copy(deep=True)
-    for index, row in data.iterrows():
-        if row['Ethnicity'] not in ETHNICITY_MAP:
-            # TODO: Can also update some other fields.
-            #  Not necessary right now.
-            data.loc[index, 'Ethnicity'] = STUDY_MAP[row[STUDY_ID]]
-
-    return data
-
-
-def correct_errors(df):
-    df = df.replace({
-        'Q10.20': {'Netiher model X not model Y':
-                       'Neither model X nor model Y'},
-        'Q201': {'Netiher ${e://Field/pref_model} nor model Z':
-            'Neither ${e://Field/pref_model} nor model Z'}
-    })
-    return df
-
-
-def aggregate_response(data_dirs, fnames):
-    dfs = []
-    for i, data_dir in enumerate(data_dirs):
-        fname = os.path.join('data', 'processed', data_dir,
-                             'APPROVED', fnames[i])
-        df = pd.read_csv(fname, index_col=0)
-        df = correct_errors(df)
-        df = df.replace({'Ethnicity': ETHNICITY_MAP})
-        df = expired_data_handler(df)
-
-        print(df['Ethnicity'].value_counts())
-        dfs.append(df)
-
-    data = pd.concat(dfs, axis=0)
-    data.reset_index(drop=True, inplace=True)
-    return data
+from utils import aggregate_response
 
 
 def prepare_causal_data(df, verbose=False):
@@ -107,12 +69,6 @@ if __name__ == "__main__":
 
     data_dirs = args.data_dirs
     fnames = args.fnames
-    """
-    data_dirs = ['09202021', '10082021', '10312021']
-    data_dirs = [data_dirs[-1]]
-    fnames = ['Pilot21_v2.0_10082021', '10082021', '10312021']
-    fnames = [fnames[-1]]
-    """
     fnames = [f + '_approved.csv' for f in fnames]
 
     df = aggregate_response(data_dirs, fnames)

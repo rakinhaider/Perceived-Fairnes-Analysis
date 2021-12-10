@@ -11,7 +11,7 @@ BIAS_OPTIONS = ['Very unbiased', 'Mildly unbiased',
 
 FAIR_QIDS = ['Q5.7', 'Q6.7']
 BIAS_QIDS = ['Q5.9', 'Q6.9']
-TRADE_OFFS = ['=FPR \u2260Outcome', '\u2260FPR =Outcome']
+TRADE_OFFS = [r'=FPR $\neq$Outcome', r'$\neq$FPR =Outcome']
 
 ATNT_QS = ['Q240', 'Q241', 'Q242', 'Q243']
 ATNT_ANS = [
@@ -43,6 +43,12 @@ CD_QS = {
 
 CDS = ['IFPI', None, 'IFNI', None, 'SFPI', None, 'SFNI', None,
        'AB', 'DB', 'DT', 'PGM']
+
+TEXT_MAP = {
+    'frauth': {'Q11.13': 'IFPI', 'Q11.9': 'IFNI', 'Q11.21': 'SFPI', 'Q11.17': 'SFNI'},
+    'icu': {'Q11.9': 'IFPI', 'Q11.13': 'IFNI', 'Q11.17': 'SFPI', 'Q11.21': 'SFNI'},
+    'rent': {'Q11.13': 'IFPI', 'Q11.9': 'IFNI', 'Q11.17': 'SFPI', 'Q11.21': 'SFNI'}
+}
 
 CHOICES = {'Q10.20': [DX, PX, 'Neither model X nor model Y', PY, DY],
            'Q10.14': [DX, PX, 'Models X and Y are equally fair', PY, DY],

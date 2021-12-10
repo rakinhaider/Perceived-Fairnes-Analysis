@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import os
 from survey_info import *
-from survey_response_aggregator import correct_errors
+from utils import correct_errors
 
 if __name__ == "__main__":
     data_dir = 'data/processed/'

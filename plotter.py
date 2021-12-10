@@ -37,6 +37,7 @@ def plot_survey(results, category_names, stats=None):
     fig, ax = plt.subplots(figsize=set_size(width=430,
                                             fraction=.95,
                                             aspect_ratio=0.5))
+    print(fig.get_size_inches())
     ax.invert_yaxis()
     ax.xaxis.set_visible(False)
     ax.set_xlim(0, np.sum(data, axis=1).max())
@@ -67,16 +68,20 @@ def plot_survey(results, category_names, stats=None):
         twin.set_yticklabels(
             ["{:.3f}".format(v) for v in stats['pvalue'].values])
     fig.tight_layout()
+    print(fig.get_size_inches())
     return fig, ax
 
 
 def plot_distribution(df, criteria, by='Q10.20',
                       stats=None, category_names=None):
+    set_rcparams()
+
     df = df.copy()
 
     if category_names is None:
         category_names = CHOICES[by]
 
+    print(stats)
     grouped = df.groupby(criteria)
     percentages = pd.DataFrame()
     d = {}
@@ -88,11 +93,13 @@ def plot_distribution(df, criteria, by='Q10.20',
         tups = ''
         for i, t in enumerate(tup):
             tups += str(STUDY_MAP.get(t, t))
-            if i != len(tup) - 1: tups += '_'
+            if i != len(tup) - 1: tups += r'\_'
         d[tups] = percentages[tup].values.tolist()
 
     if stats is not None:
         stats = stats.reindex(percentages.columns)
+
+    print(pd.DataFrame(d).transpose())
     plot_survey(d, category_names, stats)
     plt.tight_layout()
 
@@ -125,8 +132,6 @@ if __name__ == "__main__":
     response = pd.read_csv(os.path.join('data', 'processed', 'response.csv'))
     trade_off_qs = args.qid
     criteria = args.criteria
-
-    set_rcparams()
 
     plot_distribution(response, criteria, by=trade_off_qs)
     # plot_survey(response, criteria)
