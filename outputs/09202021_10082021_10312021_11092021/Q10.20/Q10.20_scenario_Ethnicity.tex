@@ -1,0 +1,36 @@
+\subsection{Q10.20 data 09202021 10082021 10312021 11092021 grouped by scenario \& Ethnicity}
+
+\begin{comment}
+                   EFPR        EO      EFNR     n    pvalue
+(frauth, Maj)  0.530303  0.469697  0.515152  33.0  0.620400
+(frauth, Min)  0.465116  0.534884  0.441860  43.0  0.599073
+(icu, Maj)     0.661765  0.338235  0.647059  34.0  0.018443
+(icu, Min)     0.450000  0.550000  0.583333  30.0  0.711365
+(rent, Maj)    0.394737  0.605263  0.486842  38.0  0.241129
+(rent, Min)    0.500000  0.500000  0.382353  34.0  1.000000
+\end{comment}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|c|}
+        \hline
+        scenario & Ethnicity & EFPR & EO & EFNR & n & p-value\\
+        \hline
+        frauth & Maj & \textbf{0.530} & 0.470 & \textbf{0.515} & 33.0 & 0.620\\
+		frauth & Min & 0.465 & \textbf{0.535} & 0.442 & 43.0 & 0.599\\
+		icu & Maj & \textbf{0.662} & 0.338 & \textbf{0.647} & 34.0 & \textbf{0.018}\\
+		icu & Min & 0.450 & \textbf{0.550} & \textbf{0.583} & 30.0 & 0.711\\
+		rent & Maj & 0.395 & \textbf{0.605} & 0.487 & 38.0 & 0.241\\
+		rent & Min & 0.500 & 0.500 & 0.382 & 34.0 & 1.000\\
+		
+        \hline
+    \end{tabular}
+    \caption{Grouped by scenario Ethnicity}
+    \label{tab:my_label}
+\end{table}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/Q10.20/09202021_10082021_10312021_11092021/Q10.20_scenario_Ethnicity.pdf}
+    \caption{Grouped by scenario \& Ethnicity}
+    \label{fig:my_label}
+\end{figure}

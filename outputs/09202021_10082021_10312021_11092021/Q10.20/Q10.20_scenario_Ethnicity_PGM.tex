@@ -1,0 +1,46 @@
+\subsection{Q10.20 data 09202021 10082021 10312021 11092021 grouped by scenario \& Ethnicity \& PGM}
+
+\begin{comment}
+                                  EFPR        EO      EFNR     n    pvalue
+(frauth, Maj, Advantaged)     0.530303  0.469697  0.515152  33.0  0.620400
+(frauth, Min, Advantaged)     0.522727  0.477273  0.363636  22.0  0.737562
+(frauth, Min, Disadvantaged)  0.404762  0.595238  0.523810  21.0  0.287938
+(icu, Maj, Advantaged)        0.685185  0.314815  0.666667  27.0  0.030762
+(icu, Maj, Disadvantaged)     0.571429  0.428571  0.571429   7.0  0.444564
+(icu, Min, Advantaged)        0.450000  0.550000  0.300000  10.0  0.873227
+(icu, Min, Disadvantaged)     0.450000  0.550000  0.725000  20.0  0.716623
+(rent, Maj, Advantaged)       0.423077  0.576923  0.461538  26.0  0.704787
+(rent, Maj, Disadvantaged)    0.333333  0.666667  0.541667  12.0  0.125971
+(rent, Min, Advantaged)       0.312500  0.687500  0.312500   8.0  0.133614
+(rent, Min, Disadvantaged)    0.557692  0.442308  0.403846  26.0  0.345427
+\end{comment}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|c|c|}
+        \hline
+        scenario & Ethnicity & PGM & EFPR & EO & EFNR & n & p-value\\
+        \hline
+        frauth & Maj & Advantaged & \textbf{0.530} & 0.470 & \textbf{0.515} & 33.0 & 0.620\\
+		frauth & Min & Advantaged & \textbf{0.523} & 0.477 & 0.364 & 22.0 & 0.738\\
+		frauth & Min & Disadvantaged & 0.405 & \textbf{0.595} & \textbf{0.524} & 21.0 & 0.288\\
+		icu & Maj & Advantaged & \textbf{0.685} & 0.315 & \textbf{0.667} & 27.0 & \textbf{0.031}\\
+		icu & Maj & Disadvantaged & \textbf{0.571} & 0.429 & \textbf{0.571} & 7.0 & 0.445\\
+		icu & Min & Advantaged & 0.450 & \textbf{0.550} & 0.300 & 10.0 & 0.873\\
+		icu & Min & Disadvantaged & 0.450 & \textbf{0.550} & \textbf{0.725} & 20.0 & 0.717\\
+		rent & Maj & Advantaged & 0.423 & \textbf{0.577} & 0.462 & 26.0 & 0.705\\
+		rent & Maj & Disadvantaged & 0.333 & \textbf{0.667} & \textbf{0.542} & 12.0 & 0.126\\
+		rent & Min & Advantaged & 0.312 & \textbf{0.688} & 0.312 & 8.0 & 0.134\\
+		rent & Min & Disadvantaged & \textbf{0.558} & 0.442 & 0.404 & 26.0 & 0.345\\
+		
+        \hline
+    \end{tabular}
+    \caption{Grouped by scenario Ethnicity PGM}
+    \label{tab:my_label}
+\end{table}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/Q10.20/09202021_10082021_10312021_11092021/Q10.20_scenario_Ethnicity_PGM.pdf}
+    \caption{Grouped by scenario \& Ethnicity \& PGM}
+    \label{fig:my_label}
+\end{figure}
