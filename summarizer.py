@@ -275,11 +275,11 @@ def get_pgm(row):
             return row[col]
 
 
-def drop_skip_rows(df):
+def drop_skip_rows(df, config):
     for index in config['SKIP_ROWS']:
         index = index - 3
         row = df.loc[index]
-        print(row[PROLIFIC_PID])
+        # print(row[PROLIFIC_PID])
         if row[STUDY_ID] == config[MAJ_STD_ID]:
             config[MAJ_RESP_COUNT] -= 1
         else:
@@ -300,7 +300,7 @@ if __name__ == "__main__":
 
     config = load_config(data_dir)
     df = pd.read_csv(os.path.join(data_dir, fname), skiprows=SKIP_ROWS)
-    df = drop_skip_rows(df)
+    df = drop_skip_rows(df, config)
     questions = {c: df.iloc[0][c] for c in df.columns}
     df.drop(index=0, axis=0, inplace=True)
     df['PGM'] = df.apply(get_pgm, axis=1)

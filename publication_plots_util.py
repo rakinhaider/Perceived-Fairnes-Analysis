@@ -2,7 +2,7 @@ import matplotlib
 
 
 def set_rcparams(**kwargs):
-    fontsize = kwargs.get('fontsize', 9)
+    fontsize = kwargs.get('fontsize', 10)
     params = {
         'pdf.fonttype': 42,
         "font.family": "serif",

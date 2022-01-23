@@ -126,7 +126,7 @@ def save_top_tokens(tokens, sc, qid1, qid2, args, max_pvalue=0.05):
                             '{:.2f}'.format(max_pvalue), sc)
     os.makedirs(file_dir, exist_ok=True)
     file_name = '{}_vs_{}.csv'.format(
-        TEXT_MAP[sc][qid1], TEXT_MAP[sc][qid2])
+        TEXT_MAP[sc].get(qid1, 'rest'), TEXT_MAP[sc].get(qid2, 'rest'))
     print(sc, qid1, qid2, file_name)
     top_tokens = tokens[tokens['pvalue'] <= max_pvalue]
     top_tokens.to_csv(os.path.join(file_dir, file_name), sep='\t')
@@ -174,10 +174,10 @@ if __name__ == "__main__":
             for j in qids:
                 if i == j:
                     continue
-                file_name = '{}_vs_{}_0.05.csv'.format(TEXT_MAP[sc][i],
+                file_name = '{}_vs_{}.csv'.format(TEXT_MAP[sc][i],
                                                        TEXT_MAP[sc][j])
                 file_dir = os.path.join('outputs', '_'.join(args.resp_dirs),
-                                        'top_tokens', sc)
+                                        'top_tokens', str(args.n), '0.05', sc)
                 tokens = pd.read_csv(os.path.join(file_dir, file_name),
                                      sep='\t', index_col=0, header=0)
                 top_k_appearance.update(tokens['word'].values)
@@ -189,4 +189,6 @@ if __name__ == "__main__":
             freq_rest = get_freq_except(freqs[sc], qid)
             top_tokens = run_freq_difference_test(freqs[sc][qid],
                                                   freq_rest)
+
             print(top_tokens)
+            save_top_tokens(top_tokens, sc, qid, 'rest', args, max_pvalue=1)

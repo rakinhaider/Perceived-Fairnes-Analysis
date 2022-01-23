@@ -93,11 +93,12 @@ def run_freq_difference_test(f1, f2):
         # print(w, success, size)
         zstat, p_value = proportions_ztest(count=success, nobs=size,
                                            alternative='larger')
-        scores.append([w, zstat, p_value, f1[w], f2[w]])
+        scores.append([w, zstat, p_value, f1[w], f2[w],
+                       f1[w] / f1_total, f2[w] / f2_total])
 
     scores.sort(key=lambda x: (x[2], x[0], x[1]))
-    return pd.DataFrame(scores, columns=['word', 'zstat', 'pvalue',
-                                         'f1_count', 'f2_count'])
+    return pd.DataFrame(scores, columns=['word', 'zstat', 'pvalue', 'f1_count',
+                                         'f2_count', 'f1_prop', 'f2_prop'])
 
 
 def run_kendall_test(response, x, y):

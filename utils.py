@@ -23,17 +23,17 @@ def get_parser():
     return parser
 
 
-def aggregate_response(data_dirs, fnames, root_dir='.'):
+def aggregate_response(data_dirs, fnames, root_dir='.', resp_status='APPROVED'):
     dfs = []
     for i, data_dir in enumerate(data_dirs):
         fname = os.path.join(root_dir, 'data', 'processed', data_dir,
-                             'APPROVED', fnames[i])
+                              resp_status, fnames[i])
         df = pd.read_csv(fname, index_col=0)
         df = correct_errors(df)
         df = df.replace({'Ethnicity': ETHNICITY_MAP})
-        df = expired_data_handler(df)
-
-        print(df['Ethnicity'].value_counts())
+        if resp_status == 'APPROVED':
+            df = expired_data_handler(df)
+            print(df['Ethnicity'].value_counts())
         dfs.append(df)
 
     data = pd.concat(dfs, axis=0)
