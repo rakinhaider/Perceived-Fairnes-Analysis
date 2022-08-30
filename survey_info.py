@@ -83,3 +83,7 @@ STUDY_MAP = {'615f94f07f89d7a8afda6025': 'Maj',
              '618b3dcb32ad5f5cc3f00d86': 'Maj',
              '618b3e1d59be0d9e09f6f943': 'Min'
              }
+
+SCENARIO_NAME_MAP = {'frauth': "FRAuth",
+                     'icu': "IRP",
+                     'rent': 'FRD'}

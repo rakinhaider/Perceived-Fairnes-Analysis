@@ -1,12 +1,14 @@
 #!/bin/bash
 
 # resp_dirs='09202021 10082021 10312021 11092021'
-resp_dirs='09202021 10082021'
+# resp_dirs='09202021 10082021'
+resp_dirs='10312021 11092021'
 # fnames='Pilot21_v2.0_10082021 10082021 10312021 11092021'
-fnames='Pilot21_v2.0_10082021 10082021'
+# fnames='Pilot21_v2.0_10082021 10082021'
+fnames='10312021 11092021'
 qid='Q10.20'
 xz_qid='Q201'
-criteria='scenario'
+criteria='scenario Sex'
 what='choice'
 
 #python -m survey_response_aggregator --resp-dirs ${resp_dirs}\
@@ -27,11 +29,11 @@ what='choice'
 python -m combine --qid ${qid} --xz-qid ${xz_qid} --criteria ${criteria}\
 	--resp-dirs ${resp_dirs} --fnames ${fnames} --what ${what}
 
-python -m combine --criteria ${criteria} --resp-dirs ${resp_dirs}\
- 	--fnames ${fnames} --what 'model_fair'
+# python -m combine --criteria ${criteria} --resp-dirs ${resp_dirs}\
+#  	--fnames ${fnames} --what 'model_fair'
 
-python -m combine --criteria ${criteria} --resp-dirs ${resp_dirs}\
- 	--fnames ${fnames} --what 'model_bias'
+# python -m combine --criteria ${criteria} --resp-dirs ${resp_dirs}\
+#  	--fnames ${fnames} --what 'model_bias'
 
-python -m combine --criteria ${criteria} --resp-dirs ${resp_dirs}\
- 	--fnames ${fnames} --what 'cd'
+# python -m combine --criteria ${criteria} --resp-dirs ${resp_dirs}\
+#  	--fnames ${fnames} --what 'cd'

@@ -22,6 +22,8 @@ if __name__ == "__main__":
         out_dir = os.path.join(out_dir, args.qid)
         if not os.path.exists(out_dir):
             os.makedirs(out_dir, exist_ok=True)
+
+        print(criteria)
         res = get_probabilities(response, criteria, xy_qs=args.qid,
                                 xz_qid=args.xz_qid)
         # Hypothesis Tests

@@ -1,0 +1,9 @@
+numpy
+pandas
+seaborn
+nltk
+requests
+git+https://github.com/MCFreddie777/language-check.git
+contractions
+wordcloud
+statsmodels

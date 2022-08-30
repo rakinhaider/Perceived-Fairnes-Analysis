@@ -86,15 +86,20 @@ def plot_distribution(df, criteria, by='Q10.20',
     percentages = pd.DataFrame()
     d = {}
     for tup, grp in grouped:
+        if "DATA EXPIRED" in tup:
+            continue
         if not isinstance(tup, tuple):
             tup = tuple([tup])
         counts = grp[by].value_counts() / len(grp)
         percentages[tup] = counts.reindex(category_names, fill_value=0)
-        tups = ''
+        tuple_to_str = ''
         for i, t in enumerate(tup):
-            tups += str(STUDY_MAP.get(t, t))
-            if i != len(tup) - 1: tups += r'\_'
-        d[tups] = percentages[tup].values.tolist()
+            if t in SCENARIO_NAME_MAP:
+                tuple_to_str += SCENARIO_NAME_MAP[t]
+            else:
+                tuple_to_str += str(STUDY_MAP.get(t, t))
+            if i != len(tup) - 1: tuple_to_str += r'\_'
+        d[tuple_to_str] = percentages[tup].values.tolist()
 
     if stats is not None:
         stats = stats.reindex(percentages.columns)
