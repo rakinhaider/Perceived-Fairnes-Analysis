@@ -93,74 +93,77 @@ def validate_approved_counts(df, data_dir):
         assert all(group_df[PROLIFIC_PID].value_counts() == 1)
 
 
-def format_responses(df, questions, data_dir, verbose=False):
-    correct_count = {}
+def format_responses(df, questions, verbose=False):
+    correct_counts = {}
+    responses = {}
     for index, row in df.iterrows():
         pid = row[PROLIFIC_PID]
         study_id = row[STUDY_ID]
-        fname = os.path.join(data_dir, study_id)
-        if not os.path.exists(fname):
-            os.mkdir(fname)
-        fname = os.path.join(fname, 'responses')
-        if not os.path.exists(fname):
-            os.mkdir(fname)
 
-        if study_id not in correct_count:
-            correct_count[study_id] = defaultdict(list)
+        if study_id not in correct_counts:
+            correct_counts[study_id] = defaultdict(list)
+        s = '{}: {}\n'.format(PROLIFIC_PID, row[PROLIFIC_PID])
+        s += '{}: {}\n'.format(STUDY_ID, row[STUDY_ID])
+        s += '{}: {}\n'.format('scenario', row['scenario'])
+        s += '{}: {}\n'.format('x_first', row['x_first'])
+        s += '{}: {}\n'.format('group', row['group'])
 
-        fname = os.path.join(fname, pid + '.txt')
-        with codecs.open(fname, 'w', encoding='utf-8') as f:
-            s = '{}: {}\n'.format(PROLIFIC_PID, row[PROLIFIC_PID])
-            s += '{}: {}\n'.format(STUDY_ID, row[STUDY_ID])
-            s += '{}: {}\n'.format('scenario', row['scenario'])
-            s += '{}: {}\n'.format('x_first', row['x_first'])
-            s += '{}: {}\n'.format('group', row['group'])
-
-            s += 'Attention Checks\n'.format('x_first', row['x_first'])
-            correct = 4
-            for i, q in enumerate(ATNT_QS):
-                s += '{}: {}\n'.format(q, row[q])
-                if row[q] != ATNT_ANS[i]:
-                    correct -= 1
-                    s += 'Incorrect Attention Check\n'
-            s += 'Correct Attentions {}\n'.format(correct)
-            correct_count[study_id][correct].append(pid)
-            s += '\n'
-            for i, q in enumerate(COMMON_QS):
-                s += '{}: {}\n'.format(q, str(questions[q]))
-                s += 'Ans: {}\n'.format(str(row[q]))
-            s += '\n'
-            for i, q in enumerate(MODELZ_QS):
-                formatted = str(questions[q]).replace('[Field-pref_model]',
-                                                     row['pref_model'])
-                s += '{}: {}\n'.format(q, formatted)
-                formatted = str(row[q])
-                formatted = formatted.replace('${e://Field/pref_model}',
-                                              row['pref_model'])
-                s += 'Ans: {}\n'.format(formatted)
-            s += '\n'
-            scenario_qs = CD_QS[row['scenario']]
-            for i, q in enumerate(scenario_qs):
-                s += '{}: {}\n'.format(q, str(questions[q]))
-                s += 'Ans: {}\n'.format(str(row[q]))
-            s += '\n'
-            for i, q in enumerate(scenario_qs):
-                if CDS[i] is not None:
-                    s += '{:10s}'.format(CDS[i])
-            s += '\n'
-            for i, q in enumerate(scenario_qs):
-                if CDS[i] is not None:
-                    s += '{:10s}'.format(str(row[q]))
-            s += '\n'
-            f.write(s)
-            f.flush()
+        s += 'Attention Checks\n'.format('x_first', row['x_first'])
+        correct = 4
+        for i, q in enumerate(ATNT_QS):
+            s += '{}: {}\n'.format(q, row[q])
+            if row[q] != ATNT_ANS[i]:
+                correct -= 1
+                s += 'Incorrect Attention Check\n'
+        s += 'Correct Attentions {}\n'.format(correct)
+        correct_counts[study_id][correct].append(pid)
+        s += '\n'
+        for i, q in enumerate(COMMON_QS):
+            s += '{}: {}\n'.format(q, str(questions[q]))
+            s += 'Ans: {}\n'.format(str(row[q]))
+        s += '\n'
+        for i, q in enumerate(MODELZ_QS):
+            formatted = str(questions[q]).replace('[Field-pref_model]',
+                                                  row['pref_model'])
+            s += '{}: {}\n'.format(q, formatted)
+            formatted = str(row[q])
+            formatted = formatted.replace('${e://Field/pref_model}',
+                                          row['pref_model'])
+            s += 'Ans: {}\n'.format(formatted)
+        s += '\n'
+        scenario_qs = CD_QS[row['scenario']]
+        for i, q in enumerate(scenario_qs):
+            s += '{}: {}\n'.format(q, str(questions[q]))
+            s += 'Ans: {}\n'.format(str(row[q]))
+        s += '\n'
+        for i, q in enumerate(scenario_qs):
+            if CDS[i] is not None:
+                s += '{:10s}'.format(CDS[i])
+        s += '\n'
+        for i, q in enumerate(scenario_qs):
+            if CDS[i] is not None:
+                s += '{:10s}'.format(str(row[q]))
+        s += '\n'
+        responses[(pid, study_id)] = s
 
     if verbose:
-        for std_id in correct_count:
+        for std_id in correct_counts:
             print(STUDY_ID, std_id)
-            for count in sorted(correct_count[std_id].keys()):
+            for count in sorted(correct_counts[std_id].keys()):
                 print('Correct Count:', count)
-                print(*sorted(correct_count[std_id][count]), sep='\n')
+                print(*sorted(correct_counts[std_id][count]), sep='\n')
+    return responses, correct_counts
+
+
+def write_responses_to_files(responses, data_dir):
+    for (pid, study_id) in responses:
+        s = responses[(pid, study_id)]
+        fname = os.path.join(data_dir, study_id, 'responses')
+        os.makedirs(fname, exist_ok=True)
+        fname = os.path.join(fname, pid + '.txt')
+        with codecs.open(fname, 'w', encoding='utf-8') as f:
+            f.write(s)
+            f.flush()
 
 
 def get_cd_aggregate(df, cds, study_id, verbose=False):
@@ -289,6 +292,22 @@ def drop_skip_rows(df, config):
     return df
 
 
+def load_raw_responses(data_dir, fname, config, skip_rows=SKIP_ROWS):
+    print(os.path.join(data_dir, fname))
+    df = pd.read_csv(os.path.join(data_dir, fname), skiprows=SKIP_ROWS)
+    df = drop_skip_rows(df, config)
+    df.drop(index=0, axis=0, inplace=True)
+    df['PGM'] = df.apply(get_pgm, axis=1)
+    keep_latest_from_pid(df)
+    return df
+
+
+def load_question(data_dir, fname):
+    df = pd.read_csv(os.path.join(data_dir, fname), nrows=2)
+    questions = {c: df.iloc[0][c] for c in df.columns}
+    return questions
+
+
 if __name__ == "__main__":
     data_dir = 'data/processed/'
     out_dir = 'outputs'
@@ -300,12 +319,8 @@ if __name__ == "__main__":
     criteria = ['scenario', 'STUDY_ID', 'x_first']
 
     config = load_config(data_dir)
-    df = pd.read_csv(os.path.join(data_dir, fname), skiprows=SKIP_ROWS)
-    df = drop_skip_rows(df, config)
-    questions = {c: df.iloc[0][c] for c in df.columns}
-    df.drop(index=0, axis=0, inplace=True)
-    df['PGM'] = df.apply(get_pgm, axis=1)
-    keep_latest_from_pid(df)
+    questions = load_question(data_dir, fname)
+    df = load_raw_responses(data_dir, fname, config, questions)
 
     # AWAITING REVIEW
     data_dir_ar = os.path.join(data_dir, AWAITING_REVIEW)
@@ -315,10 +330,12 @@ if __name__ == "__main__":
     completed.to_csv(os.path.join(data_dir, AWAITING_REVIEW,
                                   fname.replace('.csv', '_completed.csv')))
     validate_completed_counts(completed, data_dir_ar)
-    format_responses(completed, questions, data_dir_ar, verbose=True)
+    responses, graph_comprehension_stat = format_responses(
+        completed, questions, verbose=True)
+    write_responses_to_files(responses, data_dir_ar)
 
 
-    if True:
+    if False:
         print(completed)
         criteria = ['scenario']
         print('Criteria:', criteria)
@@ -342,7 +359,8 @@ if __name__ == "__main__":
                                      fname.replace('.csv', '_approved.csv')))
 
         validate_approved_counts(approved, data_dir_ap)
-        format_responses(approved, questions, data_dir_ap)
+        responses, _ = format_responses(approved, questions)
+        write_responses_to_files(responses, data_dir_ap)
 
 
         if not AWAITING_REVIEW in approved['status'].values:

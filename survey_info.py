@@ -11,7 +11,7 @@ BIAS_OPTIONS = ['Very unbiased', 'Mildly unbiased',
 
 FAIR_QIDS = ['Q5.7', 'Q6.7']
 BIAS_QIDS = ['Q5.9', 'Q6.9']
-TRADE_OFFS = [r'=FPR $\neq$Outcome', r'$\neq$FPR =Outcome']
+TRADE_OFFS = [r'=FDR $\neq$Outcome', r'$\neq$FDR =Outcome']
 
 ATNT_QS = ['Q240', 'Q241', 'Q242', 'Q243']
 ATNT_ANS = [

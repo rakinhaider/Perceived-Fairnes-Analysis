@@ -33,6 +33,9 @@ def plot_survey(results, category_names, stats=None):
     data_cum = data.cumsum(axis=1)
     category_colors = plt.get_cmap('RdYlGn')(
         np.linspace(0.15, 0.85, data.shape[1]))
+    # TODO: Improve the bad hack below. Reversing just based on biased labels.
+    if "Very unbiased" in category_names:
+        category_colors = category_colors[::-1][:]
 
     fig, ax = plt.subplots(figsize=set_size(width=430,
                                             fraction=.95,
@@ -42,6 +45,7 @@ def plot_survey(results, category_names, stats=None):
     ax.xaxis.set_visible(False)
     ax.set_xlim(0, np.sum(data, axis=1).max())
     for i, (colname, color) in enumerate(zip(category_names, category_colors)):
+
         widths = data[:, i]
         starts = data_cum[:, i] - widths
         rects = ax.barh(range(len(labels)), widths,
@@ -81,7 +85,6 @@ def plot_distribution(df, criteria, by='Q10.20',
     if category_names is None:
         category_names = CHOICES[by]
 
-    print(stats)
     grouped = df.groupby(criteria)
     percentages = pd.DataFrame()
     d = {}
@@ -106,6 +109,9 @@ def plot_distribution(df, criteria, by='Q10.20',
 
     print(pd.DataFrame(d).transpose())
     plot_survey(d, category_names, stats)
+    ymin, ymax = plt.gca().get_ylim()
+    plt.vlines(0.5, ymin=ymin, ymax=ymax, colors='black', linestyles='dashed',
+               linewidth=0.5)
     plt.tight_layout()
 
 
