@@ -1,0 +1,36 @@
+\subsection{Q10.20 data 10312021 grouped by scenario \& PGM}
+
+\begin{comment}
+                             EFPR        EO      EFNR     n    pvalue
+(frauth, Advantaged)     0.500000  0.500000  0.425000  20.0  0.890746
+(frauth, Disadvantaged)  0.500000  0.500000  0.500000   1.0       NaN
+(icu, Advantaged)        0.850000  0.150000  0.600000  10.0  0.010220
+(icu, Disadvantaged)     0.555556  0.444444  0.611111   9.0  0.951739
+(rent, Advantaged)       0.125000  0.875000  0.375000   8.0  0.016377
+(rent, Disadvantaged)    0.538462  0.461538  0.615385  13.0  0.537596
+\end{comment}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|c|}
+        \hline
+        scenario & PGM & EFPR & EO & EFNR & n & p-value\\
+        \hline
+        frauth & Advantaged & 0.500 & 0.500 & 0.425 & 20.0 & 0.891\\
+		frauth & Disadvantaged & 0.500 & 0.500 & 0.500 & 1.0 & nan\\
+		icu & Advantaged & \textbf{0.850} & 0.150 & \textbf{0.600} & 10.0 & \textbf{0.010}\\
+		icu & Disadvantaged & \textbf{0.556} & 0.444 & \textbf{0.611} & 9.0 & 0.952\\
+		rent & Advantaged & 0.125 & \textbf{0.875} & 0.375 & 8.0 & \textbf{0.016}\\
+		rent & Disadvantaged & \textbf{0.538} & 0.462 & \textbf{0.615} & 13.0 & 0.538\\
+		
+        \hline
+    \end{tabular}
+    \caption{Grouped by scenario PGM}
+    \label{tab:my_label}
+\end{table}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/Q10.20/10312021/Q10.20_scenario_PGM.pdf}
+    \caption{Grouped by scenario \& PGM}
+    \label{fig:my_label}
+\end{figure}
