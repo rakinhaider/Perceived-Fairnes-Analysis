@@ -31,6 +31,7 @@ def aggregate_response(data_dirs, fnames, root_dir='.', resp_status='APPROVED'):
         df = pd.read_csv(fname, index_col=0)
         df = correct_errors(df)
         df = df.replace({'Ethnicity': ETHNICITY_MAP})
+
         if resp_status == 'APPROVED':
             df = expired_data_handler(df)
             print(df['Ethnicity'].value_counts())
@@ -59,7 +60,8 @@ def merge_cd_columns(data):
 def expired_data_handler(data):
     data = data.copy(deep=True)
     for index, row in data.iterrows():
-        if row['Ethnicity'] not in ETHNICITY_MAP:
+        if row['Ethnicity'] not in ETHNICITY_MAP and \
+                row['Ethnicity'] not in ETHNICITY_MAP.values():
             # TODO: Can also update some other fields.
             #  Not necessary right now.
             data.loc[index, 'Ethnicity'] = STUDY_MAP[row[STUDY_ID]]

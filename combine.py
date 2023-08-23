@@ -6,7 +6,9 @@ from utils import get_parser, aggregate_response
 
 if __name__ == "__main__":
 
-    args = get_parser().parse_args()
+    parser = get_parser()
+    parser.add_argument('--drop-males', default=False, action='store_true')
+    args = parser.parse_args()
 
     data_dir = 'data/processed/'
     out_dir = 'outputs'
@@ -17,7 +19,11 @@ if __name__ == "__main__":
     fnames = [f + '_approved.csv' for f in fnames]
 
     response = aggregate_response(args.resp_dirs, fnames)
-
+    if args.drop_males:
+        print(response['Sex'].value_counts())
+        females = response['Sex'] == 'Female'
+        response = response[females]
+        print(response['Sex'].value_counts())
     if args.what == 'choice':
         out_dir = os.path.join(out_dir, args.qid)
         if not os.path.exists(out_dir):
@@ -38,6 +44,7 @@ if __name__ == "__main__":
         # Generate LaTeX file
         fig_name = fname
         fname = '_'.join([args.qid] + criteria) + '.tex'
+        print(fname)
         if not os.path.exists(out_dir): os.mkdir(out_dir)
         with open(os.path.join(out_dir, fname), 'w') as f:
             s = "\\subsubsection{{{:s} data {:s} grouped by {:s}}}\n\n".format(

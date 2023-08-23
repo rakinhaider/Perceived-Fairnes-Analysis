@@ -109,9 +109,9 @@ def plot_distribution(df, criteria, by='Q10.20',
 
     print(pd.DataFrame(d).transpose())
     plot_survey(d, category_names, stats)
-    ymin, ymax = plt.gca().get_ylim()
-    plt.vlines(0.5, ymin=ymin, ymax=ymax, colors='black', linestyles='dashed',
-               linewidth=0.5)
+    # ymin, ymax = plt.gca().get_ylim()
+    # plt.vlines(0.5, ymin=ymin, ymax=ymax, colors='black', linestyles='dashed',
+    #    linewidth=0.5)
     plt.tight_layout()
 
 

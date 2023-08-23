@@ -1,0 +1,42 @@
+\subsubsection{Q10.20 data 10312021 11092021 grouped by scenario \& Ethnicity \& Sex}
+
+\begin{comment}
+                              EFPR        EO      EFNR     n    pvalue
+(frauth, Black, Female)   0.333333  0.666667  0.583333   6.0  0.159011
+(frauth, Latino, Female)  0.708333  0.291667  0.375000  12.0  0.136180
+(frauth, White, Female)   0.464286  0.535714  0.571429  14.0  0.815854
+(icu, Black, Female)      0.357143  0.642857  0.428571   7.0  0.260534
+(icu, Latino, Female)     0.727273  0.272727  0.681818  11.0  0.061697
+(icu, White, Female)      0.600000  0.400000  0.666667  15.0  0.218703
+(rent, Black, Female)     0.400000  0.600000  0.600000   5.0  0.477289
+(rent, Latino, Female)    0.538462  0.461538  0.423077  13.0  0.630760
+(rent, White, Female)     0.272727  0.727273  0.590909  11.0  0.096448
+\end{comment}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|c|c|}
+        \hline
+        scenario & Ethnicity & Sex & EFPR & EO & EFNR & n & p-value\\
+        \hline
+        frauth & Black & Female & 0.333 & \textbf{0.667} & \textbf{0.583} & 6.0 & 0.159\\
+		frauth & Latino & Female & \textbf{0.708} & 0.292 & 0.375 & 12.0 & 0.136\\
+		frauth & White & Female & 0.464 & \textbf{0.536} & \textbf{0.571} & 14.0 & 0.816\\
+		icu & Black & Female & 0.357 & \textbf{0.643} & 0.429 & 7.0 & 0.261\\
+		icu & Latino & Female & \textbf{0.727} & 0.273 & \textbf{0.682} & 11.0 & 0.062\\
+		icu & White & Female & \textbf{0.600} & 0.400 & \textbf{0.667} & 15.0 & 0.219\\
+		rent & Black & Female & 0.400 & \textbf{0.600} & \textbf{0.600} & 5.0 & 0.477\\
+		rent & Latino & Female & \textbf{0.538} & 0.462 & 0.423 & 13.0 & 0.631\\
+		rent & White & Female & 0.273 & \textbf{0.727} & \textbf{0.591} & 11.0 & 0.096\\
+		
+        \hline
+    \end{tabular}
+    \caption{Grouped by scenario Ethnicity Sex}
+    \label{tab:my_label}
+\end{table}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/Q10.20/10312021_11092021/Q10.20_scenario_Ethnicity_Sex.pdf}
+    \caption{Grouped by scenario \& Ethnicity \& Sex}
+    \label{fig:my_label}
+\end{figure}

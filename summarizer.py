@@ -208,7 +208,6 @@ def get_probabilities(df, criteria,
                       xy_qs='Q10.20',
                       xz_qid='Q201'):
     df = df.copy()
-    print(df['Sex'].value_counts())
     grouped = df.groupby(criteria)
     res = pd.DataFrame(columns=['EFPR', 'EO', 'EFNR', 'n'])
     for tup, grp in grouped:

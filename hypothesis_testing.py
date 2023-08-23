@@ -90,7 +90,6 @@ def run_freq_difference_test(f1, f2):
     for w in vocab:
         success = [f1[w], f2[w]]
         size = [f1_total, f2_total]
-        # print(w, success, size)
         zstat, p_value = proportions_ztest(count=success, nobs=size,
                                            alternative='larger')
         scores.append([w, zstat, p_value, f1[w], f2[w],
@@ -105,6 +104,7 @@ def run_kendall_test(response, x, y):
     x_choices = CHOICES['CD'] if x not in CHOICES else CHOICES[x]
     y_choices = CHOICES['CD'] if y not in CHOICES else CHOICES[y]
 
+    print(dict(zip(x_choices, range(len(x_choices)))))
     response = response.replace({
         x: dict(zip(x_choices, range(len(x_choices))))
     })
@@ -112,7 +112,7 @@ def run_kendall_test(response, x, y):
         y: dict(zip(y_choices[::-1], range(len(y_choices))))
     })
     stats = kendalltau(response[x], response[y], variant='c')
-    print(stats)
+    # print(stats)
     return stats
 
 
@@ -136,7 +136,10 @@ if __name__ == "__main__":
         print(run_model_property_test(response, 'bias', grouping_criteria))
     elif args.what == 'kendall':
         response = merge_cd_columns(response)
-        print(run_kendall_test(response, 'Q10.20', 'IFPI'))
-        print(run_kendall_test(response, 'Q10.20', 'SFPI'))
-        print(run_kendall_test(response, 'Q201', 'IFNI'))
-        print(run_kendall_test(response, 'Q201', 'SFNI'))
+        print(response)
+        for qid, sf in zip(['Q10.20', 'Q10.20', 'Q201', 'Q201'],
+                           ['IFPI', 'SFPI', 'IFNI', 'SFNI']):
+            print(qid, sf, run_kendall_test(response, qid, sf))
+        # print(run_kendall_test(response, 'Q10.20', 'SFPI'))
+        # print(run_kendall_test(response, 'Q201', 'IFNI'))
+        # print(run_kendall_test(response, 'Q201', 'SFNI'))

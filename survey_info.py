@@ -70,9 +70,28 @@ CHOICES = {'Q10.20': [DX, PX, 'Neither model X nor model Y', PY, DY],
            'Q6.9': BIAS_OPTIONS,
            'CD': ['High', 'Moderate', 'Low']}
 
-ETHNICITY_MAP = {'White/Caucasian': 'Maj',
-                 'Black/African American': 'Min', 'Latino/Hispanic': 'Min',
-                 'African': 'Min'}
+################ Before CHI Review
+"""
+ETHNICITY_MAP = {'White/Caucasian': 'Caucasian',
+                 'Black/African American': 'Non-Caucasian', 
+                 'Latino/Hispanic': 'Non-Caucasian',
+                 'African': 'Non-Caucasian'}
+"""
+
+"""
+# Re-tagging ethnicities from Maj vs Min to Caucasian vs. Non-Caucasian
+ETHNICITY_MAP = {'White/Caucasian': 'Caucasian',
+                 'Black/African American': 'Non-Caucasian',
+                 'Latino/Hispanic': 'Non-Caucasian',
+                 'African': 'Non-Caucasian'}
+
+"""
+################ Intersectionality
+ETHNICITY_MAP = {'White/Caucasian': 'White',
+                 'Black/African American': 'Black',
+                 'Latino/Hispanic': 'Latino',
+                 'African': 'Black'}
+
 
 STUDY_MAP = {'615f94f07f89d7a8afda6025': 'Maj',
              '614391dcdf09127f013fe60a': 'Maj',

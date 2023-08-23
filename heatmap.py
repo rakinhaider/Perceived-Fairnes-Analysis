@@ -82,8 +82,13 @@ if __name__ == "__main__":
     fnames = [f + '_approved.csv' for f in fnames]
     response = aggregate_response(args.resp_dirs, fnames)
     response = merge_cd_columns(response)
+    print(args.criteria)
+    print(args.fnames)
+    if args.criteria == ['None']:
+        args.criteria = None
+    # exit()
 
-    set_rcparams()
+    set_rcparams(fontsize=9)
     if False:
         x, y = 'Q10.14', 'Q10.20'
         data = get_heatmap_data(response, x, y)
@@ -111,7 +116,7 @@ if __name__ == "__main__":
         for tup, grp in grouped:
             fig, ax = plt.gcf(), plt.gca()
             fig.set_size_inches(set_size(width=200, fraction=0.9,
-                                         aspect_ratio=1))
+                                         aspect_ratio=.7))
             heatmap_data = get_heatmap_data(grp, x, y)
             plot_heatmap(heatmap_data, x, y, fig, ax,
                          show_ylabels=True,
@@ -119,11 +124,12 @@ if __name__ == "__main__":
             out_dir = os.path.join('outputs', "_".join(args.resp_dirs),
                                    'heatmaps', tup)
             os.makedirs(out_dir, exist_ok=True)
-
+            print(out_dir)
             plt.savefig(os.path.join(
                 out_dir, '{}_vs_choice'.format(x) + '.pdf'),
                 format='pdf', bbox_inches='tight')
 
             plt.close()
-            # plt.show(block=False)
+            # plt.show()
+            # exit()
 
