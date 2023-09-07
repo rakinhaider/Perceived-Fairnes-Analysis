@@ -3,19 +3,19 @@ import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
-from survey_info import CHOICES, CDS
+from survey_info import CHOICES, CDS, SF_MAP
 from utils import get_parser, aggregate_response, merge_cd_columns
 from publication_plots_util import set_rcparams, set_size
 
 
 def plot_heatmap(data, x, y, fig, ax,
                  x_is_cd=True, show_ylabels=True,
-                 title=None, annot=False):
+                 choice=None, annot=False):
     if x_is_cd:
         x_ticks, y_ticks = CHOICES['CD'], CHOICES[y]
     else:
         x_ticks, y_ticks = CHOICES[x], CHOICES[y]
-
+    title = f'{SF_MAP.get(x, x)}/{choice}'
     y_ticks = [yt.replace('${e://Field/pref_model}', 'model X/Y')
                for yt in y_ticks]
     im = ax.imshow(data)
@@ -49,9 +49,12 @@ def plot_heatmap(data, x, y, fig, ax,
     if title:
         ax.set_title(title, fontsize=matplotlib.rcParams['font.size'])
     else:
-        ax.set_title("{} / {}".format(x, y),
+        ax.set_title("{} / {}".format(x, choice),
                      fontsize=matplotlib.rcParams['font.size'])
-
+    ax.set_xlabel(f'{SF_MAP.get(x, x)} Rating')
+    ylabel = f'Preference between\\\\{choice}'
+    ylabel = '\\begin{center}' + ylabel + '\\end{center}'
+    ax.set_ylabel(rf'{ylabel}', fontsize='small')
     divider = make_axes_locatable(ax)
     width = axes_size.AxesY(ax, aspect=1/25)
     pad = axes_size.Fraction(0.5, width)
@@ -109,7 +112,7 @@ if __name__ == "__main__":
         grouped = response.groupby(by=args.criteria)
     else:
         grouped = [('all', response)]
-    titles = ['{}/Model X vs Model Y'] * 2 + ['{}/Model X or Y vs Model Z'] * 2
+    choices = ['Model X vs Model Y'] * 2 + ['Model X or Y vs Model Z'] * 2
     xs = ['IFPI', 'SFPI', 'IFNI', 'SFNI']
     ys = ['Q10.20', 'Q10.20', 'Q201', 'Q201']
     for i, (x, y) in enumerate(zip(xs, ys)):
@@ -119,17 +122,13 @@ if __name__ == "__main__":
                                          aspect_ratio=.7))
             heatmap_data = get_heatmap_data(grp, x, y)
             plot_heatmap(heatmap_data, x, y, fig, ax,
-                         show_ylabels=True,
-                         title=titles[i].format(x), annot=True)
+                         show_ylabels=True, choice=choices[i], annot=True)
             out_dir = os.path.join('outputs', "_".join(args.resp_dirs),
                                    'heatmaps', tup)
             os.makedirs(out_dir, exist_ok=True)
             print(out_dir)
             plt.savefig(os.path.join(
-                out_dir, '{}_vs_choice'.format(x) + '.pdf'),
+                out_dir, '{}_vs_choice'.format(SF_MAP.get(x, x)) + '.pdf'),
                 format='pdf', bbox_inches='tight')
 
             plt.close()
-            # plt.show()
-            # exit()
-

@@ -19,6 +19,8 @@ def set_rcparams(**kwargs):
         'text.latex.preamble': r"""
             \usepackage{libertine}
             \usepackage[libertine]{newtxmath}
+            \usepackage{amsmath}
+            \usepackage{dsfont}
         """
     }
     if kwargs.get('titlepad') is not None:

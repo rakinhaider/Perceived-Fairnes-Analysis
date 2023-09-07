@@ -37,9 +37,10 @@ def plot_survey(results, category_names, stats=None):
     if "Very unbiased" in category_names:
         category_colors = category_colors[::-1][:]
 
-    fig, ax = plt.subplots(figsize=set_size(width=430,
+    fig, ax = plt.subplots(figsize=set_size(width=241,
                                             fraction=.95,
-                                            aspect_ratio=0.5))
+                                            aspect_ratio='golden'),
+                           tight_layout=True)
     print(fig.get_size_inches())
     ax.invert_yaxis()
     ax.xaxis.set_visible(False)
@@ -55,12 +56,13 @@ def plot_survey(results, category_names, stats=None):
         r, g, b, _ = color
         text_color = 'white' if r * g * b < 0.5 else 'darkgrey'
         # ax.bar_label(rects, label_type='center', color=text_color)
-    legend = ax.legend(ncol=3, bbox_to_anchor=(0, 1),
-                       loc='lower left',
-                       fontsize='x-small')
+    legend = ax.legend(ncol=3, bbox_to_anchor=(0.5, 1.25),
+                       loc='upper center', fontsize='xx-small')
 
     ax.tick_params(axis='both',
-                   labelsize=matplotlib.rcParams.get('font.size'))
+                   # labelsize=matplotlib.rcParams.get('font.size')
+                   labelsize='xx-small'
+                   )
 
     if stats is not None:
         twin = ax.twinx()
@@ -70,7 +72,8 @@ def plot_survey(results, category_names, stats=None):
         twin.set_ylim(ax.get_ylim())
         twin.set_yticks(ax.get_yticks())
         twin.set_yticklabels(
-            ["{:.3f}".format(v) for v in stats['pvalue'].values])
+            ["{:.3f}".format(v) for v in stats['pvalue'].values],
+            fontsize='xx-small')
     fig.tight_layout()
     print(fig.get_size_inches())
     return fig, ax
@@ -116,6 +119,7 @@ def plot_distribution(df, criteria, by='Q10.20',
 
 
 def plot_model_property(response, prop, criteria, stats=None):
+    set_rcparams(fontsize=10)
     data = []
     cols = ['scenario', 'PGM', 'group', 'Ethnicity']
     qids = FAIR_QIDS if prop == 'fair' else BIAS_QIDS

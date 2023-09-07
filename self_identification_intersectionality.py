@@ -1,13 +1,18 @@
 import os
 import pandas as pd
+import numpy as np
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from constants import AWAITING_REVIEW, APPROVED, PROLIFIC_PID
-from survey_info import ETHNICITY_MAP
 from publication_plots_util import set_rcparams, set_size
 from summarizer import (
     format_responses, load_config, load_question
 )
+
+ETHNICITY_MAP = {'White/Caucasian': 'White',
+                 'Black/African American': 'Black',
+                 'Latino/Hispanic': 'Latino',
+                 'African': 'Black'}
 
 
 def get_pids_by_status(status, participant_fname_base, config):
@@ -82,7 +87,7 @@ if __name__ == "__main__":
                                 drop=True, append=False, inplace=True)
 
     set_rcparams(fontsize=18)
-    plt.figure(figsize=set_size(width=460, fraction=0.95, aspect_ratio=0.75))
+    plt.figure(figsize=set_size(width=241, fraction=1, aspect_ratio=0.75))
     adv_bars = []
     y_ticklabels = []
     for s in eth_count.index:
@@ -93,10 +98,13 @@ if __name__ == "__main__":
              color=colors[0])
     plt.barh(range(0, 6), adv_bars, label='Advantaged', color=colors[1],
              left=[1 - r for r in adv_bars])
-    print(adv_bars)
-    plt.legend(ncol=2, bbox_to_anchor=(0.1, 1), loc='lower left', fontsize=12)
-    plt.yticks(range(0, 6), y_ticklabels)
+    plt.legend(ncol=2, bbox_to_anchor=(1.05, 1.1), loc='center right',
+               fontsize=8)
+    plt.yticks(range(0, 6), y_ticklabels, fontsize='xx-small')
+    plt.xticks(np.arange(0, 1.1,  .2), range(0, 110, 20), fontsize='xx-small')
     plt.xlim((0, 1))
+    plt.xlabel('Portion of Participants (\%)', fontsize='xx-small')
+    plt.ylabel('Demographic Sub-groups', fontsize='xx-small')
     plt.tight_layout()
     plt.savefig('outputs/intersectionality.pdf')
     plt.show()

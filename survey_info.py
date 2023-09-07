@@ -11,7 +11,7 @@ BIAS_OPTIONS = ['Very unbiased', 'Mildly unbiased',
 
 FAIR_QIDS = ['Q5.7', 'Q6.7']
 BIAS_QIDS = ['Q5.9', 'Q6.9']
-TRADE_OFFS = [r'=FDR $\neq$Outcome', r'$\neq$FDR =Outcome']
+TRADE_OFFS = [r'Model X', r'Model Y']
 
 ATNT_QS = ['Q240', 'Q241', 'Q242', 'Q243']
 ATNT_ANS = [
@@ -71,12 +71,10 @@ CHOICES = {'Q10.20': [DX, PX, 'Neither model X nor model Y', PY, DY],
            'CD': ['High', 'Moderate', 'Low']}
 
 ################ Before CHI Review
-"""
 ETHNICITY_MAP = {'White/Caucasian': 'Caucasian',
                  'Black/African American': 'Non-Caucasian', 
                  'Latino/Hispanic': 'Non-Caucasian',
                  'African': 'Non-Caucasian'}
-"""
 
 """
 # Re-tagging ethnicities from Maj vs Min to Caucasian vs. Non-Caucasian
@@ -86,12 +84,13 @@ ETHNICITY_MAP = {'White/Caucasian': 'Caucasian',
                  'African': 'Non-Caucasian'}
 
 """
+"""
 ################ Intersectionality
 ETHNICITY_MAP = {'White/Caucasian': 'White',
                  'Black/African American': 'Black',
                  'Latino/Hispanic': 'Latino',
                  'African': 'Black'}
-
+"""
 
 STUDY_MAP = {'615f94f07f89d7a8afda6025': 'Maj',
              '614391dcdf09127f013fe60a': 'Maj',
@@ -103,6 +102,9 @@ STUDY_MAP = {'615f94f07f89d7a8afda6025': 'Maj',
              '618b3e1d59be0d9e09f6f943': 'Min'
              }
 
-SCENARIO_NAME_MAP = {'frauth': "FRAuth",
-                     'icu': "IRP",
-                     'rent': 'FRD'}
+SCENARIO_NAME_MAP = {'frauth': "FaceReco",
+                     'icu': "ICUSupp",
+                     'rent': 'FraudDet'}
+
+SF_MAP = {'IFPI': 'IndFPImpact', 'IFNI': 'IndFNImpact',
+                       'SFPI': 'SocFPImpact', 'SFNI': 'SocFNImpact'}
