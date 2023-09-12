@@ -5,15 +5,124 @@ from scipy.stats import wilcoxon, chisquare, kendalltau
 import pandas as pd
 from utils import get_parser, aggregate_response, merge_cd_columns
 from survey_info import *
-from itertools import combinations
 from statsmodels.stats.proportion import proportions_ztest
+from scipy.stats import f_oneway
+from scipy.stats import tukey_hsd
+
+SCENARIOS = ['icu', 'frauth', 'rent']
+
+
+def run_rq1_anova(response, qid, grouping_criteria):
+    # response[grouping_criteria + [qid, 'PROLIFIC_PID']].to_csv('temp_responses.tsv', sep='\t')
+    if 'scenario' in grouping_criteria:
+        grouping_criteria.remove('scenario')
+    if len(grouping_criteria) == 0:
+        grouped = [('all', response)]
+    else:
+        grouped = response.groupby(grouping_criteria)
+    choices = CHOICES[qid]
+    for val, grp in grouped:
+        columns = []
+        for scenario in ['icu', 'frauth', 'rent']:
+            scneario_grp = grp[grp['scenario'] == scenario].copy(deep=True)
+            scneario_grp = scneario_grp.replace({
+                qid: dict(zip(choices, [0, 1, 2, 3, 4]))
+            })
+            # print(scneario_grp[qid])
+            columns.append(scneario_grp[qid])
+
+        val = (val,)
+        condition = {c: val[i] for i, c in enumerate(grouping_criteria)}
+        test_stats = f_oneway(*columns)
+        output = [' '.join([f'{key}={condition[key]}' for key in condition])]
+        output.append(f'{test_stats.statistic:.3f}')
+        output.append(f'{test_stats.pvalue:.3f}')
+        print("\t&\t".join([str(o) for o in output]) + '\\\\')
+
+
+def run_rq1_tukey(response, qid, grouping_criteria):
+    if 'scenario' in grouping_criteria:
+        grouping_criteria.remove('scenario')
+    if len(grouping_criteria) == 0:
+        grouped = [('all', response)]
+    else:
+        grouped = response.groupby(grouping_criteria)
+    choices = CHOICES[qid]
+    for val, grp in grouped:
+        columns = []
+        for scenario in SCENARIOS:
+            scneario_grp = grp[grp['scenario'] == scenario].copy(deep=True)
+            scneario_grp = scneario_grp.replace({
+                qid: dict(zip(choices, [0, 1, 2, 3, 4]))
+            })
+            # print(scneario_grp[qid])
+            columns.append(scneario_grp[qid])
+
+        val = (val,)
+        print({c: val[i] for i, c in enumerate(grouping_criteria)})
+        test_stats = tukey_hsd(*columns)
+
+        for sc1, sc2 in [(0, 1), (0, 2), (1, 2)]:
+            print('\t&\t'.join([SCENARIO_NAME_MAP[SCENARIOS[sc1]],
+                                SCENARIO_NAME_MAP[SCENARIOS[sc2]],
+                                f'{test_stats.statistic[sc1][sc2]:.3f}',
+                                f'{test_stats.pvalue[sc1][sc2]:.3f}'])
+                  + '\\\\')
+
+
+def run_rq2_anova(response, qid, grouping_criteria):
+    used_columns = []
+    assert qid in CDS
+    choices = CHOICES['CD']
+    columns = []
+    for sc in ['icu', 'frauth', 'rent']:
+        scenario_qid = CD_QS[sc][CDS.index(qid)]
+        scenario_grp = response[response['scenario'] == sc].copy(deep=True)
+        scenario_grp = scenario_grp.replace({
+            scenario_qid: dict(zip(choices[::-1], range(len(choices))))
+        })
+        # print(scenario_grp[scenario_qid])
+        columns.append(scenario_grp[scenario_qid])
+        used_columns.append(scenario_qid)
+
+    test_stats = f_oneway(*columns)
+    output = [str(qid)]
+    output.append(f'{test_stats.statistic:.3f}')
+    output.append(f'{test_stats.pvalue:.3f}')
+    print("\t&\t".join([str(o) for o in output]) + '\\\\')
+
+
+def run_rq2_tukey(response, qid, grouping_criteria):
+    assert qid in CDS
+    choices = CHOICES['CD']
+    columns = []
+    for sc in ['icu', 'frauth', 'rent']:
+        scenario_qid = CD_QS[sc][CDS.index(qid)]
+        scenario_grp = response[response['scenario'] == sc].copy(deep=True)
+        scenario_grp = scenario_grp.replace({
+            scenario_qid: dict(zip(choices[::-1], range(len(choices))))
+        })
+        # print(scenario_grp[scenario_qid])
+        columns.append(scenario_grp[scenario_qid])
+
+    test_stats = tukey_hsd(*columns)
+    # print(test_stats.__dict__)
+    for sc1, sc2 in [(0, 1), (0, 2), (1, 2)]:
+        print('\t&\t'.join(['', SCENARIO_NAME_MAP[SCENARIOS[sc1]],
+                            SCENARIO_NAME_MAP[SCENARIOS[sc2]],
+                            f'{columns[sc1].mean():.3f}',
+                            f'{columns[sc2].mean():.3f}',
+                            f'{test_stats.statistic[sc1][sc2]:.3f}',
+                            f'{test_stats.pvalue[sc1][sc2]:.3f}'])
+              + '\\\\')
+
 
 def run_wilcoxon(response, by, grp_criteria):
     grouped = response.groupby(grp_criteria)
     d = {}
     for tup, grp in grouped:
         if not isinstance(tup, tuple):
-            tup = (tup, )
+            tup = (tup,)
         if np.any(grp[by] != 0):
             statistics = wilcoxon(grp[by], zero_method='pratt')
             d[tup] = statistics.pvalue
@@ -64,14 +173,13 @@ def run_cd_test(response, grp_criteria):
         for cd_id, cd_name in zip(cd_ids, cd_names):
             categories = len(grp[cd_id].value_counts())
             observed = grp[cd_id].value_counts()
-            expected = [len(grp)/categories for i in range(categories)]
+            expected = [len(grp) / categories for i in range(categories)]
             observed.name = cd_name
             # print(observed)
             chi = chisquare(observed, expected)
             cd_stats.append((observed.idxmax(),
                              'Sig' if chi.pvalue < 0.05 else 'Not',
                              chi.pvalue))
-
 
         print(*[v for v, _, _ in cd_stats], sep='\t')
         print(*[v for _, v, _ in cd_stats], sep='\t')
@@ -119,15 +227,16 @@ def run_kendall_test(response, x, y):
 if __name__ == "__main__":
 
     parser = get_parser()
+    parser.add_argument('--research-question', '-rq', type=int)
     args = parser.parse_args()
 
-    xvsy_qid = args.qid
+    qid = args.qid
     grouping_criteria = args.criteria
     fnames = [f + "_approved.csv" for f in args.fnames]
     response = aggregate_response(args.resp_dirs, fnames)
 
     if args.what == 'choice':
-        print(run_choice_test(response, xvsy_qid, grouping_criteria))
+        print(run_choice_test(response, qid, grouping_criteria))
     elif args.what == 'cd':
         run_cd_test(response, grouping_criteria)
     elif args.what == 'model_fair':
@@ -140,6 +249,15 @@ if __name__ == "__main__":
         for qid, sf in zip(['Q10.20', 'Q10.20', 'Q201', 'Q201'],
                            ['IFPI', 'SFPI', 'IFNI', 'SFNI']):
             print(qid, sf, run_kendall_test(response, qid, sf))
-        # print(run_kendall_test(response, 'Q10.20', 'SFPI'))
-        # print(run_kendall_test(response, 'Q201', 'IFNI'))
-        # print(run_kendall_test(response, 'Q201', 'SFNI'))
+    elif args.research_question == 1 and args.what == 'anova':
+        run_rq1_anova(response, qid, grouping_criteria)
+    elif args.research_question == 1 and args.what == 'tukey':
+        run_rq1_tukey(response, qid, grouping_criteria)
+    elif args.research_question == 2 and args.what == 'anova':
+        for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI']:
+            run_rq2_anova(response, qid, grouping_criteria)
+    elif args.research_question == 2 and args.what == 'tukey':
+        for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI']:
+            print('\\midrule')
+            print('\\multirow{{3}}{{*}}{{{:s}}}'.format(qid), end='')
+            run_rq2_tukey(response, qid, grouping_criteria)

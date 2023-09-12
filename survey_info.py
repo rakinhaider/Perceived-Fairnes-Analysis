@@ -102,9 +102,9 @@ STUDY_MAP = {'615f94f07f89d7a8afda6025': 'Maj',
              '618b3e1d59be0d9e09f6f943': 'Min'
              }
 
-SCENARIO_NAME_MAP = {'frauth': "FaceReco",
-                     'icu': "ICUSupp",
+SCENARIO_NAME_MAP = {'frauth': "FaceAuth",
+                     'icu': "ICUReq",
                      'rent': 'FraudDet'}
 
 SF_MAP = {'IFPI': 'IndFPImpact', 'IFNI': 'IndFNImpact',
-                       'SFPI': 'SocFPImpact', 'SFNI': 'SocFNImpact'}
+          'SFPI': 'SocFPImpact', 'SFNI': 'SocFNImpact'}

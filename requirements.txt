@@ -2,8 +2,11 @@ numpy
 pandas
 seaborn
 nltk
+wheel
+setuptools
 requests
 git+https://github.com/MCFreddie777/language-check.git
 contractions
 wordcloud
 statsmodels
+scipy==1.11.2

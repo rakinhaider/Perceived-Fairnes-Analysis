@@ -19,7 +19,8 @@ def get_parser():
     parser.add_argument('--what', default='choice', choices=['choice', 'cd',
                                                              'model_fair',
                                                              'model_bias',
-                                                             'kendall'])
+                                                             'kendall',
+                                                             'anova', 'tukey'])
     return parser
 
 
@@ -34,7 +35,7 @@ def aggregate_response(data_dirs, fnames, root_dir='.', resp_status='APPROVED'):
 
         if resp_status == 'APPROVED':
             df = expired_data_handler(df)
-            print(df['Ethnicity'].value_counts())
+            # print(df['Ethnicity'].value_counts())
         dfs.append(df)
 
     data = pd.concat(dfs, axis=0)
