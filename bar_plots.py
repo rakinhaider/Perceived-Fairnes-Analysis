@@ -57,7 +57,7 @@ if __name__ == "__main__":
         do_filter = True
         col = criteria[1]
         vals = response[col].value_counts().index
-        if col == 'Ethnicity':
+        if col == 'Ethnicity' or col == 'group':
             vals = vals[::-1]
     for i, v in enumerate(vals):
         ax = axes[i]
@@ -111,16 +111,19 @@ if __name__ == "__main__":
         plt.legend(fontsize='x-small')
     else:
         left = 1
-        above = 1.7
+        above = 1.6
         if len(criteria) == 1:
             above -= 0.2
         legends = axes[0].legend(ncol=2, bbox_to_anchor=(left, above),
-                        fontsize='x-small', fancybox=True, shadow=False)
+                        fontsize='xx-small', fancybox=True, shadow=False)
         for t in legends.get_texts():
             t.set_ha('center')
 
     axes[-1].set_xlabel(r'Configuration $c$', fontsize='small')
     fig.tight_layout()
+    print(plt.gcf().get_size_inches())
+    plt.tight_layout()
+    print(plt.gcf().get_size_inches())
     # plt.show()
     dir_path = os.path.join('outputs', '10312021_11092021', 'barplots')
     plt.savefig(os.path.join(dir_path, '_'.join(criteria) + '.pdf'), format='pdf')

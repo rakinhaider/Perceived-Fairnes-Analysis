@@ -3,19 +3,19 @@ import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable, axes_size
+
+import survey_info
 from survey_info import CHOICES, CDS, SF_MAP
 from utils import get_parser, aggregate_response, merge_cd_columns
 from publication_plots_util import set_rcparams, set_size
 
 
-def plot_heatmap(data, x, y, fig, ax,
+def plot_heatmap(data, x1, x2, y, fig, ax,
                  x_is_cd=True, show_ylabels=True,
                  choice=None, annot=False):
-    if x_is_cd:
-        x_ticks, y_ticks = CHOICES['CD'], CHOICES[y]
-    else:
-        x_ticks, y_ticks = CHOICES[x], CHOICES[y]
-    title = f'{SF_MAP.get(x, x)}/{choice}'
+    x_ticks = [-2, -1, 0, 1, 2]
+    y_ticks = CHOICES[y]
+    title = '(IndFPImpact - IndFNImpact) vs (Overall preference between model X and Y)'
     y_ticks = [yt.replace('${e://Field/pref_model}', 'model X/Y')
                for yt in y_ticks]
     im = ax.imshow(data)
@@ -46,12 +46,9 @@ def plot_heatmap(data, x, y, fig, ax,
                 text = ax.text(j, i, '{:.2f}'.format(data[i, j]),
                                ha="center", va="center", color="w",
                                fontsize=fontsize)
-    if title:
-        ax.set_title(title, fontsize=matplotlib.rcParams['font.size'])
-    else:
-        ax.set_title("{} / {}".format(x, choice),
-                     fontsize=matplotlib.rcParams['font.size'])
-    ax.set_xlabel(f'{SF_MAP.get(x, x)} Rating')
+
+    xlabel = f'{SF_MAP.get(x1, x1)} - {SF_MAP.get(x2, x2)}'
+    ax.set_xlabel(xlabel, fontsize='small')
     ylabel = f'Preference between\\\\{choice}'
     ylabel = '\\begin{center}' + ylabel + '\\end{center}'
     ax.set_ylabel(rf'{ylabel}', fontsize='small')
@@ -63,17 +60,35 @@ def plot_heatmap(data, x, y, fig, ax,
     cb.ax.tick_params(labelsize=fontsize)
 
 
-def get_heatmap_data(df, x, y):
+def get_heatmap_data(df, x1, x2, y):
     data = []
-    if x not in CHOICES:
-        choices = ['High', 'Moderate', 'Low']
+    choices = CHOICES['CD']
+    df = df.copy(deep=True)
+    if x1[0] == 'B':
+        df = df.replace({
+            'IFPI': dict(zip(choices[::-1], range(len(choices)))),
+            'SFPI': dict(zip(choices[::-1], range(len(choices))))
+        })
+        df = df.replace({
+            'IFNI': dict(zip(choices[::-1], range(len(choices)))),
+            'SFNI': dict(zip(choices[::-1], range(len(choices))))
+        })
+        df['BFPI'] = (df['IFPI'] + df['SFPI']) / 2
+        df['BFNI'] = (df['IFNI'] + df['SFNI']) / 2
     else:
-        choices = CHOICES[x]
-    for c in choices:
-        selected = df[df[x] == c]
+        df = df.replace({
+            x1: dict(zip(choices[::-1], range(len(choices))))
+        })
+        df = df.replace({
+            x2: dict(zip(choices[::-1], range(len(choices))))
+        })
+    df['differences'] = df[x1] - df[x2]
+    for diff, count in df['differences'].value_counts().sort_index().items():
+        selected = df[df['differences'] == diff]
+        print(diff, selected[y].value_counts().reindex(CHOICES[y], fill_value=0))
         percentages = selected[y].value_counts() / len(selected)
-        # percentages = selected[y].value_counts()
         percentages = percentages.reindex(CHOICES[y], fill_value=0)
+        print(percentages)
         data.append(list(percentages.values))
     return np.array(data).transpose()
 
@@ -92,43 +107,30 @@ if __name__ == "__main__":
     # exit()
 
     set_rcparams(fontsize=9)
-    if False:
-        x, y = 'Q10.14', 'Q10.20'
-        data = get_heatmap_data(response, x, y)
-        plot_heatmap(np.array(data), x, y, plt.gcf(), plt.gca(), x_is_cd=False)
-        plt.show()
-
-        x, y = 'Q10.16', 'Q10.20'
-        data = get_heatmap_data(response, x, y)
-        plot_heatmap(np.array(data), x, y, plt.gcf(), plt.gca(), x_is_cd=False)
-        plt.show()
-
-        x, y = 'Q10.18', 'Q10.20'
-        data = get_heatmap_data(response, x, y)
-        plot_heatmap(np.array(data), x, y, plt.gcf(), plt.gca(), x_is_cd=False)
-        plt.show()
 
     if args.criteria:
         grouped = response.groupby(by=args.criteria)
     else:
         grouped = [('all', response)]
     choices = ['Model X vs Model Y'] * 2 + ['Model X or Y vs Model Z'] * 2
-    xs = ['IFPI', 'SFPI', 'IFNI', 'SFNI']
-    ys = ['Q10.20', 'Q10.20', 'Q201', 'Q201']
-    for i, (x, y) in enumerate(zip(xs, ys)):
+    x1s = ['IFPI', 'SFPI', 'BFPI']
+    x2s = ['IFNI', 'SFNI', 'BFNI']
+    ys = ['Q10.20', 'Q10.20', 'Q10.20']
+    print(response['IFPI'])
+    for i, (x1, x2, y) in enumerate(zip(x1s, x2s, ys)):
         for tup, grp in grouped:
             fig, ax = plt.gcf(), plt.gca()
             fig.set_size_inches(set_size(width=200, fraction=0.9,
                                          aspect_ratio=.7))
-            heatmap_data = get_heatmap_data(grp, x, y)
-            plot_heatmap(heatmap_data, x, y, fig, ax,
+            heatmap_data = get_heatmap_data(grp, x1, x2, y)
+            plot_heatmap(heatmap_data, x1, x2, y, fig, ax,
                          show_ylabels=True, choice=choices[i], annot=True)
             out_dir = os.path.join('outputs', "_".join(args.resp_dirs),
-                                   'heatmaps', tup)
+                                   'heatmaps', 'diff', tup)
             os.makedirs(out_dir, exist_ok=True)
             print(out_dir)
             plt.savefig(os.path.join(
-                out_dir, '{}_vs_choice'.format(SF_MAP.get(x, x)) + '.pdf'),
-                format='pdf', bbox_inches='tight')
+                 out_dir, 'diff({}, {})_vs_choice'.format(SF_MAP.get(x1, x1), SF_MAP.get(x2, x2)) + '.pdf'),
+                 format='pdf', bbox_inches='tight')
 
             plt.close()

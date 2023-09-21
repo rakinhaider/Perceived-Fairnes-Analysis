@@ -1,13 +1,14 @@
-import itertools
-from collections import defaultdict
 import numpy as np
-from scipy.stats import wilcoxon, chisquare, kendalltau
 import pandas as pd
-from utils import get_parser, aggregate_response, merge_cd_columns
 from survey_info import *
-from statsmodels.stats.proportion import proportions_ztest
 from scipy.stats import f_oneway
 from scipy.stats import tukey_hsd
+from collections import defaultdict
+from bar_plots import get_preferred_model
+from scipy.stats import wilcoxon, chisquare, kendalltau
+from statsmodels.stats.proportion import proportions_ztest
+from utils import get_parser, aggregate_response, merge_cd_columns
+
 
 SCENARIOS = ['icu', 'frauth', 'rent']
 
@@ -26,7 +27,7 @@ def run_rq1_anova(response, qid, grouping_criteria):
         for scenario in ['icu', 'frauth', 'rent']:
             scneario_grp = grp[grp['scenario'] == scenario].copy(deep=True)
             scneario_grp = scneario_grp.replace({
-                qid: dict(zip(choices, [0, 1, 2, 3, 4]))
+                qid: dict(zip(choices, [-2, -1, 0, 1, 2]))
             })
             # print(scneario_grp[qid])
             columns.append(scneario_grp[qid])
@@ -53,7 +54,7 @@ def run_rq1_tukey(response, qid, grouping_criteria):
         for scenario in SCENARIOS:
             scneario_grp = grp[grp['scenario'] == scenario].copy(deep=True)
             scneario_grp = scneario_grp.replace({
-                qid: dict(zip(choices, [0, 1, 2, 3, 4]))
+                qid: dict(zip(choices, [-2, -1, 0, 1, 2]))
             })
             # print(scneario_grp[qid])
             columns.append(scneario_grp[qid])
@@ -71,39 +72,45 @@ def run_rq1_tukey(response, qid, grouping_criteria):
 
 
 def run_rq2_anova(response, qid, grouping_criteria):
-    used_columns = []
-    assert qid in CDS
+    assert qid in CDS or qid.startswith('B')
     choices = CHOICES['CD']
     columns = []
     for sc in ['icu', 'frauth', 'rent']:
-        scenario_qid = CD_QS[sc][CDS.index(qid)]
+        # scenario_qid = CD_QS[sc][CDS.index(qid)]
         scenario_grp = response[response['scenario'] == sc].copy(deep=True)
-        scenario_grp = scenario_grp.replace({
-            scenario_qid: dict(zip(choices[::-1], range(len(choices))))
-        })
-        # print(scenario_grp[scenario_qid])
-        columns.append(scenario_grp[scenario_qid])
-        used_columns.append(scenario_qid)
+        scenario_qids = get_scenario_qids(sc, qid)
+        scenario_vals = np.zeros(len(scenario_grp))
+        for scenario_qid in scenario_qids:
+            scenario_grp = scenario_grp.replace({
+                scenario_qid: dict(zip(choices[::-1], range(len(choices))))
+            })
+            scenario_vals += scenario_grp[scenario_qid]
+        scenario_vals /= len(scenario_qids)
+        columns.append(scenario_vals)
 
     test_stats = f_oneway(*columns)
     output = [str(qid)]
+    output.extend([f'{c.mean():.4f}' for c in columns])
     output.append(f'{test_stats.statistic:.3f}')
     output.append(f'{test_stats.pvalue:.3f}')
     print("\t&\t".join([str(o) for o in output]) + '\\\\')
 
 
 def run_rq2_tukey(response, qid, grouping_criteria):
-    assert qid in CDS
+    assert qid in CDS or qid.startswith('B')
     choices = CHOICES['CD']
     columns = []
     for sc in ['icu', 'frauth', 'rent']:
-        scenario_qid = CD_QS[sc][CDS.index(qid)]
         scenario_grp = response[response['scenario'] == sc].copy(deep=True)
-        scenario_grp = scenario_grp.replace({
-            scenario_qid: dict(zip(choices[::-1], range(len(choices))))
-        })
-        # print(scenario_grp[scenario_qid])
-        columns.append(scenario_grp[scenario_qid])
+        scenario_qids = get_scenario_qids(sc, qid)
+        scenario_vals = np.zeros(len(scenario_grp))
+        for scenario_qid in scenario_qids:
+            scenario_grp = scenario_grp.replace({
+                scenario_qid: dict(zip(choices[::-1], range(len(choices))))
+            })
+            scenario_vals += scenario_grp[scenario_qid]
+        scenario_vals /= len(scenario_qids)
+        columns.append(scenario_vals)
 
     test_stats = tukey_hsd(*columns)
     # print(test_stats.__dict__)
@@ -115,6 +122,36 @@ def run_rq2_tukey(response, qid, grouping_criteria):
                             f'{test_stats.statistic[sc1][sc2]:.3f}',
                             f'{test_stats.pvalue[sc1][sc2]:.3f}'])
               + '\\\\')
+
+
+def get_preference_counts(response):
+    df = pd.DataFrame()
+    for sc in SCENARIOS:
+        scenario_grp = response[response['scenario'] == sc]
+        pref = scenario_grp.apply(get_preferred_model, axis=1)
+        counts = pref.value_counts().astype(float)
+        for index in counts.index:
+            if len(index) > 1:
+                for ch in index:
+                    counts[ch] += counts[index] / len(index)
+                counts.drop(labels=index, inplace=True)
+        counts = counts.reindex(['x', 'y', 'z'])
+        df[sc] = counts
+    return df
+
+
+def get_preference_probabilities(response):
+    counts = get_preference_counts(response)
+    counts = counts.div(counts.sum(axis=0))
+    return counts
+
+
+def run_rq1_prop(response, qid, grouping_criteria):
+    df = get_preference_counts(response)
+    print(df)
+    for model in ['x', 'y', 'z']:
+        counts = df.loc[model]
+        nobs = df.sum(axis=0)
 
 
 def run_wilcoxon(response, by, grp_criteria):
@@ -253,11 +290,13 @@ if __name__ == "__main__":
         run_rq1_anova(response, qid, grouping_criteria)
     elif args.research_question == 1 and args.what == 'tukey':
         run_rq1_tukey(response, qid, grouping_criteria)
+    elif args.research_question == 1 and args.what == 'prop':
+        run_rq1_prop(response, qid, grouping_criteria)
     elif args.research_question == 2 and args.what == 'anova':
-        for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI']:
+        for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI', 'BFPI', 'BFNI']:
             run_rq2_anova(response, qid, grouping_criteria)
     elif args.research_question == 2 and args.what == 'tukey':
-        for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI']:
+        for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI', 'BFPI', 'BFNI']:
             print('\\midrule')
             print('\\multirow{{3}}{{*}}{{{:s}}}'.format(qid), end='')
             run_rq2_tukey(response, qid, grouping_criteria)

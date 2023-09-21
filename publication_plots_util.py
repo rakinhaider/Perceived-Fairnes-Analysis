@@ -30,7 +30,7 @@ def set_rcparams(**kwargs):
     if kwargs.get('markersize') is not None:
         params["lines.markersize"] = kwargs.get('markersize')
     matplotlib.rcParams.update(params)
-    print(matplotlib.rcParams.get('font.size'))
+    # print(matplotlib.rcParams.get('font.size'))
 
 
 # Source: https://tobiasraabe.github.io/blog/matplotlib-for-publications.html

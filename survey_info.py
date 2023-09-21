@@ -107,4 +107,19 @@ SCENARIO_NAME_MAP = {'frauth': "FaceAuth",
                      'rent': 'FraudDet'}
 
 SF_MAP = {'IFPI': 'IndFPImpact', 'IFNI': 'IndFNImpact',
-          'SFPI': 'SocFPImpact', 'SFNI': 'SocFNImpact'}
+          'SFPI': 'SocFPImpact', 'SFNI': 'SocFNImpact',
+          'BFPI': 'Average FPImapact',
+          'BFNI': 'Average FNImapact'}
+
+METRIC_MAP = {'efdr': 'EFDiscRate',
+              'eo': 'EOutcome',
+              'efor': 'EFOmitRate'}
+SCENARIOS = ['icu', 'frauth', 'rent']
+
+
+def get_scenario_qids(scenario, qid):
+    if qid.startswith('B'):
+        return [CD_QS[scenario][CDS.index(qid.replace('B', 'I'))],
+                CD_QS[scenario][CDS.index(qid.replace('B', 'S'))],]
+    else:
+        return [CD_QS[scenario][CDS.index(qid)]]
