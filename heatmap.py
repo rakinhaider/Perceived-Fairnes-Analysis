@@ -41,6 +41,7 @@ def plot_heatmap(data, x1, x2, y, fig, ax,
 
     # Loop over data dimensions and create text annotations.
     if annot:
+        print(data)
         for i in range(len(y_ticks)):
             for j in range(len(x_ticks)):
                 text = ax.text(j, i, '{:.2f}'.format(data[i, j]),
@@ -73,8 +74,8 @@ def get_heatmap_data(df, x1, x2, y):
             'IFNI': dict(zip(choices[::-1], range(len(choices)))),
             'SFNI': dict(zip(choices[::-1], range(len(choices))))
         })
-        df['BFPI'] = (df['IFPI'] + df['SFPI']) / 2
-        df['BFNI'] = (df['IFNI'] + df['SFNI']) / 2
+        df['BFPI'] = ((df['IFPI'] + df['SFPI']) / 2).round()
+        df['BFNI'] = ((df['IFNI'] + df['SFNI']) / 2).round()
     else:
         df = df.replace({
             x1: dict(zip(choices[::-1], range(len(choices))))
@@ -83,6 +84,10 @@ def get_heatmap_data(df, x1, x2, y):
             x2: dict(zip(choices[::-1], range(len(choices))))
         })
     df['differences'] = df[x1] - df[x2]
+    print(x1, x2)
+    print(df[x1] - df[x2])
+    print('##########################################################################')
+    print(df['differences'].value_counts())
     for diff, count in df['differences'].value_counts().sort_index().items():
         selected = df[df['differences'] == diff]
         print(diff, selected[y].value_counts().reindex(CHOICES[y], fill_value=0))
@@ -112,11 +117,10 @@ if __name__ == "__main__":
         grouped = response.groupby(by=args.criteria)
     else:
         grouped = [('all', response)]
-    choices = ['Model X vs Model Y'] * 2 + ['Model X or Y vs Model Z'] * 2
-    x1s = ['IFPI', 'SFPI', 'BFPI']
-    x2s = ['IFNI', 'SFNI', 'BFNI']
-    ys = ['Q10.20', 'Q10.20', 'Q10.20']
-    print(response['IFPI'])
+    choices = {'Q10.20': 'Model X vs Model Y', 'Q201': 'Model X or Y vs Model Z'}
+    x1s = ['IFPI', 'IFPI', 'SFPI', 'SFPI', 'BFPI', 'BFPI']
+    x2s = ['IFNI', 'IFNI', 'SFNI', 'SFNI', 'BFNI', 'BFNI']
+    ys = ['Q10.20', 'Q201', 'Q10.20', 'Q201', 'Q10.20', 'Q201']
     for i, (x1, x2, y) in enumerate(zip(x1s, x2s, ys)):
         for tup, grp in grouped:
             fig, ax = plt.gcf(), plt.gca()
@@ -124,13 +128,13 @@ if __name__ == "__main__":
                                          aspect_ratio=.7))
             heatmap_data = get_heatmap_data(grp, x1, x2, y)
             plot_heatmap(heatmap_data, x1, x2, y, fig, ax,
-                         show_ylabels=True, choice=choices[i], annot=True)
+                         show_ylabels=True, choice=choices[y], annot=True)
             out_dir = os.path.join('outputs', "_".join(args.resp_dirs),
                                    'heatmaps', 'diff', tup)
             os.makedirs(out_dir, exist_ok=True)
             print(out_dir)
             plt.savefig(os.path.join(
-                 out_dir, 'diff({}, {})_vs_choice'.format(SF_MAP.get(x1, x1), SF_MAP.get(x2, x2)) + '.pdf'),
+                 out_dir, 'diff({}, {})_vs_{}'.format(SF_MAP.get(x1, x1), SF_MAP.get(x2, x2), y) + '.pdf'),
                  format='pdf', bbox_inches='tight')
 
             plt.close()

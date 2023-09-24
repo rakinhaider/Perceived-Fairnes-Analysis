@@ -9,3 +9,6 @@ outputs/*
 **/__pycache__/**/*
 myvenv/
 .Rproj.user
+**/.Rdata
+**/.Rhistory
+**/*.Rproj

@@ -5,12 +5,35 @@ from scipy.stats import f_oneway
 from scipy.stats import tukey_hsd
 from collections import defaultdict
 from bar_plots import get_preferred_model
-from scipy.stats import wilcoxon, chisquare, kendalltau
+from scipy.stats import wilcoxon, chisquare, kendalltau, ttest_rel, pearsonr
 from statsmodels.stats.proportion import proportions_ztest
 from utils import get_parser, aggregate_response, merge_cd_columns
+import rpy2.robjects as robjects
+from rpy2.robjects import numpy2ri
 
 
 SCENARIOS = ['icu', 'frauth', 'rent']
+
+
+def map_items_to_value(response):
+    response = response.copy(deep=True)
+    for qid in ['Q10.20', 'Q201']:
+        response = response.replace({
+            qid: dict(zip(CHOICES[qid], [-2, -1, 0, 1, 2]))
+        })
+    for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI']:
+        response = response.replace({
+            qid: dict(zip(CHOICES['CD'][::-1], range(len(CHOICES['CD']))))
+        })
+    return response
+
+
+def combine_risk_perceptions(response):
+    assert 'IFPI' in response.columns and 'SFPI' in response.columns
+    assert 'IFNI' in response.columns and 'SFNI' in response.columns
+    response['BFPI'] = (response['IFPI'] + response['SFPI']) / 2
+    response['BFNI'] = (response['IFNI'] + response['SFNI']) / 2
+    return response
 
 
 def run_rq1_anova(response, qid, grouping_criteria):
@@ -36,6 +59,8 @@ def run_rq1_anova(response, qid, grouping_criteria):
         condition = {c: val[i] for i, c in enumerate(grouping_criteria)}
         test_stats = f_oneway(*columns)
         output = [' '.join([f'{key}={condition[key]}' for key in condition])]
+        print(*[c.values for c in columns])
+        output.extend([f'{c.mean():.3f}' for c in columns])
         output.append(f'{test_stats.statistic:.3f}')
         output.append(f'{test_stats.pvalue:.3f}')
         print("\t&\t".join([str(o) for o in output]) + '\\\\')
@@ -96,6 +121,32 @@ def run_rq2_anova(response, qid, grouping_criteria):
     print("\t&\t".join([str(o) for o in output]) + '\\\\')
 
 
+def run_rq2_paired_t(response, qid1, qid2, alternative='two-sided'):
+    assert qid1 in CDS or qid1.startswith('B')
+    assert qid2 in CDS or qid2.startswith('B')
+    choices = CHOICES['CD']
+    for sc in ['icu', 'frauth', 'rent']:
+        scenario_grp = response[response['scenario'] == sc].copy(deep=True)
+        scenario_qids1 = get_scenario_qids(sc, qid1)
+        scenario_qids2 = get_scenario_qids(sc, qid2)
+        vals = [np.zeros(len(scenario_grp)), np.zeros(len(scenario_grp))]
+        for i, scenario_qids in enumerate([scenario_qids1, scenario_qids2]):
+            for qid in scenario_qids:
+                assert all(scenario_grp[qid].notna())
+                scenario_grp = scenario_grp.replace({
+                    qid: dict(zip(choices[::-1], range(len(choices))))
+                })
+                vals[i] += scenario_grp[qid].values
+            vals[i] /= len(scenario_qids)
+
+        test_stats = ttest_rel(vals[0], vals[1], alternative=alternative)
+        output = [SCENARIO_NAME_MAP[sc], f'({qid1}, {qid2})', alternative]
+        output.extend([f'{v.mean():.3f}' for v in vals])
+        output.append(f'{test_stats.statistic:.3f}')
+        output.append(f'{test_stats.pvalue:.3f}')
+        print("\t".join([str(o) for o in output]) + '\\\\')
+
+
 def run_rq2_tukey(response, qid, grouping_criteria):
     assert qid in CDS or qid.startswith('B')
     choices = CHOICES['CD']
@@ -147,11 +198,38 @@ def get_preference_probabilities(response):
 
 
 def run_rq1_prop(response, qid, grouping_criteria):
-    df = get_preference_counts(response)
-    print(df)
-    for model in ['x', 'y', 'z']:
-        counts = df.loc[model]
-        nobs = df.sum(axis=0)
+    r = robjects.r
+    r('source')('rscripts/proportion_test.R')
+    proptest = robjects.globalenv['proptest']
+    if 'scenario' in grouping_criteria:
+        grouping_criteria.remove('scenario')
+    if len(grouping_criteria) == 0:
+        grouped = [('all', response)]
+    else:
+        grouped = response.groupby(grouping_criteria)
+    for val, grp in grouped:
+        print(f'######################### {val} #############################')
+        df = get_preference_counts(grp)
+        print(df)
+        for model in ['x', 'y', 'z']:
+            numpy2ri.activate()
+            counts = df.loc[model]
+            nobs = df.sum(axis=0)
+            prop = proptest(counts.values, nobs.values)
+            # print(prop)
+            prop = list(prop)
+            chi_square = prop[0][0]
+            pvalue = prop[2][0]
+            print(rf'chi-squared {chi_square:.3f}, p-value {pvalue:.3f}')
+            numpy2ri.deactivate()
+
+
+def run_rq3_pearson(response, x1, x2, y):
+    response['differences'] = response[x1] - response[x2]
+    test_results = pearsonr(response['differences'].values, response[y].values)
+    print('\t&\t'.join([str(s) for s in [x1, x2, y, test_results.statistic, test_results.pvalue]]))
+
+
 
 
 def run_wilcoxon(response, by, grp_criteria):
@@ -300,3 +378,17 @@ if __name__ == "__main__":
             print('\\midrule')
             print('\\multirow{{3}}{{*}}{{{:s}}}'.format(qid), end='')
             run_rq2_tukey(response, qid, grouping_criteria)
+    elif args.research_question == 2 and args.what == 'pairedt':
+        for qid1, qid2 in [('IFPI', 'IFNI'), ('SFPI', 'SFNI'), ('BFPI', 'BFNI')]:
+            for alternative in ['two-sided', 'less', 'greater']:
+                run_rq2_paired_t(response, qid1, qid2, alternative)
+    elif args.research_question == 3 and args.what == 'pearson':
+        response = merge_cd_columns(response)
+        response = map_items_to_value(response)
+        response = combine_risk_perceptions(response)
+        choices = {'Q10.20': 'Model X vs Model Y', 'Q201': 'Model X or Y vs Model Z'}
+        x1s = ['IFPI', 'IFPI', 'SFPI', 'SFPI', 'BFPI', 'BFPI']
+        x2s = ['IFNI', 'IFNI', 'SFNI', 'SFNI', 'BFNI', 'BFNI']
+        ys = ['Q10.20', 'Q201', 'Q10.20', 'Q201', 'Q10.20', 'Q201']
+        for x1, x2, y in zip(x1s, x2s, ys):
+            run_rq3_pearson(response, x1, x2, y)
