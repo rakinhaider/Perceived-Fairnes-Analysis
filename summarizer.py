@@ -19,7 +19,7 @@ def load_demographic(std_id, data_dir):
 
 def load_config(data_dir):
     config = pd.read_csv(os.path.join(data_dir, 'config'),
-                         sep='\t', index_col=0, squeeze=True, header=None)
+                         sep='\t', index_col=0, header=None).squeeze("columns")
     config['SKIP_ROWS'] = eval(config.at['SKIP_ROWS'])
     config[MAJ_RESP_COUNT] = int(config[MAJ_RESP_COUNT])
     config[MIN_RESP_COUNT] = int(config[MIN_RESP_COUNT])
@@ -37,7 +37,7 @@ def load_config(data_dir):
 
 def keep_latest_from_pid(df):
     counts = df[PROLIFIC_PID].value_counts()
-    for pid, count in counts.iteritems():
+    for pid, count in counts.items():
         if count > 1:
             # print(pid, count)
             resp_by_pid = df[df[PROLIFIC_PID] == pid]
@@ -52,7 +52,7 @@ def keep_latest_from_pid(df):
 def merge_demographics(df, data_dir):
     study_ids = df[STUDY_ID].value_counts()
     demo_list = []
-    for std_id, count in study_ids.iteritems():
+    for std_id, count in study_ids.items():
         demo = load_demographic(std_id, data_dir)
         demo_list.append(demo)
 

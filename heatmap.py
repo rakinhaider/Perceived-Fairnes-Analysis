@@ -14,28 +14,27 @@ def plot_heatmap(data, x1, x2, y, fig, ax,
                  x_is_cd=True, show_ylabels=True,
                  choice=None, annot=False):
     x_ticks = [-2, -1, 0, 1, 2]
-    y_ticks = CHOICES[y]
+    y_ticks = CHOICES[y][::-1]
     title = '(IndFPImpact - IndFNImpact) vs (Overall preference between model X and Y)'
     y_ticks = [yt.replace('${e://Field/pref_model}', 'model X/Y')
                for yt in y_ticks]
+    data = data[::-1]
     im = ax.imshow(data)
 
     # fontsize = matplotlib.rcParams['font.size']
-    fontsize = 'small'
+    fontsize = 'x-small'
     # We want to show all ticks...
     ax.set_xticks(np.arange(len(x_ticks)))
     # ... and label them with the respective list entries
     ax.set_xticklabels(x_ticks)
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
-             rotation_mode="anchor", fontsize=fontsize)
+    plt.setp(ax.get_xticklabels(), fontsize=fontsize)
 
     if show_ylabels:
+        y_ticks = [2, 1, 0, -1, -2]
         ax.set_yticks(np.arange(len(y_ticks)))
         ax.set_yticklabels(y_ticks)
-        plt.setp(ax.get_yticklabels(), rotation=45, ha="right",
-                 rotation_mode="anchor",
-                 fontsize=fontsize)
+        plt.setp(ax.get_yticklabels(), fontsize='xx-small')
     else:
         ax.set_yticklabels([])
 
@@ -49,13 +48,14 @@ def plot_heatmap(data, x1, x2, y, fig, ax,
                                fontsize=fontsize)
 
     xlabel = f'{SF_MAP.get(x1, x1)} - {SF_MAP.get(x2, x2)}'
-    ax.set_xlabel(xlabel, fontsize='small')
-    ylabel = f'Preference between\\\\{choice}'
-    ylabel = '\\begin{center}' + ylabel + '\\end{center}'
-    ax.set_ylabel(rf'{ylabel}', fontsize='small')
+    ax.set_xlabel(xlabel, fontsize='x-small')
+    # ylabel = f'Preference between\\\\{choice}'
+    # ylabel = '\\begin{center}' + ylabel + '\\end{center}'
+    ylabels = f'XY Preferences'
+    ax.set_ylabel(ylabels, fontsize='x-small')
     divider = make_axes_locatable(ax)
     width = axes_size.AxesY(ax, aspect=1/25)
-    pad = axes_size.Fraction(0.5, width)
+    pad = axes_size.Fraction(0.25, width)
     cax = divider.append_axes("right", size=width, pad=pad)
     cb = plt.colorbar(im, cax=cax)
     cb.ax.tick_params(labelsize=fontsize)
@@ -84,16 +84,17 @@ def get_heatmap_data(df, x1, x2, y):
             x2: dict(zip(choices[::-1], range(len(choices))))
         })
     df['differences'] = df[x1] - df[x2]
-    print(x1, x2)
-    print(df[x1] - df[x2])
-    print('##########################################################################')
-    print(df['differences'].value_counts())
+    # print(x1, x2)
+    # print(df[x1] - df[x2])
+    # print('##########################################################################')
+    # print(df['differences'].value_counts())
     for diff, count in df['differences'].value_counts().sort_index().items():
         selected = df[df['differences'] == diff]
-        print(diff, selected[y].value_counts().reindex(CHOICES[y], fill_value=0))
+        # print(diff, selected[y].value_counts().reindex(CHOICES[y], fill_value=0))
         percentages = selected[y].value_counts() / len(selected)
         percentages = percentages.reindex(CHOICES[y], fill_value=0)
-        print(percentages)
+        print(diff, percentages)
+        # print(percentages)
         data.append(list(percentages.values))
     return np.array(data).transpose()
 
@@ -109,7 +110,6 @@ if __name__ == "__main__":
     print(args.fnames)
     if args.criteria == ['None']:
         args.criteria = None
-    # exit()
 
     set_rcparams(fontsize=9)
 
@@ -124,17 +124,21 @@ if __name__ == "__main__":
     for i, (x1, x2, y) in enumerate(zip(x1s, x2s, ys)):
         for tup, grp in grouped:
             fig, ax = plt.gcf(), plt.gca()
+            print(fig.get_size_inches())
             fig.set_size_inches(set_size(width=200, fraction=0.9,
                                          aspect_ratio=.7))
+            fig.tight_layout()
             heatmap_data = get_heatmap_data(grp, x1, x2, y)
             plot_heatmap(heatmap_data, x1, x2, y, fig, ax,
                          show_ylabels=True, choice=choices[y], annot=True)
             out_dir = os.path.join('outputs', "_".join(args.resp_dirs),
                                    'heatmaps', 'diff', tup)
+            fig.tight_layout()
+            print(fig.get_size_inches())
             os.makedirs(out_dir, exist_ok=True)
             print(out_dir)
             plt.savefig(os.path.join(
                  out_dir, 'diff({}, {})_vs_{}'.format(SF_MAP.get(x1, x1), SF_MAP.get(x2, x2), y) + '.pdf'),
-                 format='pdf', bbox_inches='tight')
+                 format='pdf')
 
             plt.close()

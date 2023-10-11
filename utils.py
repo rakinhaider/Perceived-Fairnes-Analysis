@@ -6,7 +6,7 @@ import pandas as pd
 import constants
 from constants import STUDY_ID
 from survey_info import ETHNICITY_MAP, CD_QS, COMMON_QS, MODELZ_QS, CDS, \
-    STUDY_MAP
+    STUDY_MAP, CHOICES
 
 
 def get_parser():
@@ -43,14 +43,17 @@ def aggregate_response(data_dirs, fnames, root_dir='.', resp_status='APPROVED'):
 
 def merge_cd_columns(data):
     rows = []
+    included_questions = COMMON_QS + MODELZ_QS
+    # Note: included to enable max(X, Y) == X conditioned analysis
+    included_questions += ['pref_model', 'group', 'Ethnicity']
     for index, row in data.iterrows():
-        cols = ['scenario'] + CD_QS[row['scenario']] + COMMON_QS + MODELZ_QS
+        cols = ['scenario'] + CD_QS[row['scenario']] + included_questions
         row_data = [row[constants.PROLIFIC_PID]] + [row[c] for c in cols]
         rows.append(row_data)
 
     col_names = [constants.PROLIFIC_PID, 'scenario']
     col_names += [c if c is not None else 'Why?' for c in CDS]
-    col_names += COMMON_QS + MODELZ_QS
+    col_names += included_questions
     df = pd.DataFrame(rows, columns=col_names)
     df.set_index(constants.PROLIFIC_PID, inplace=True)
     return df
@@ -72,7 +75,31 @@ def correct_errors(df):
     df = df.replace({
         'Q10.20': {'Netiher model X not model Y':
                        'Neither model X nor model Y'},
-        'Q201': {'Netiher ${e://Field/pref_model} nor model Z':
+        'Q201': {'Netiher ${e://Field/pscenario_grpref_model} nor model Z':
             'Neither ${e://Field/pref_model} nor model Z'}
     })
     return df
+
+
+def map_items_to_value(response):
+    response = response.copy(deep=True)
+    for qid in ['Q10.20', 'Q201']:
+        # print(f'Mapping to {dict(zip(CHOICES[qid], [-2, -1, 0, 1, 2]))}')
+        response = response.replace({
+            qid: dict(zip(CHOICES[qid], [-2, -1, 0, 1, 2]))
+        })
+    for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI']:
+        # print(f'Mapping to {dict(zip(CHOICscenario_grpES["CD"][::-1],
+        #       range(len(CHOICES["CD"]))))}')
+        response = response.replace({
+            qid: dict(zip(CHOICES['CD'][::-1], range(len(CHOICES['CD']))))
+        })
+    return response
+
+
+def combine_risk_perceptions(response):
+    assert 'IFPI' in response.columns and 'SFPI' in response.columns
+    assert 'IFNI' in response.columns and 'SFNI' in response.columns
+    response['BFPI'] = (response['IFPI'] + response['SFPI']) / 2
+    response['BFNI'] = (response['IFNI'] + response['SFNI']) / 2
+    return response

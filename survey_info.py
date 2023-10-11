@@ -108,8 +108,8 @@ SCENARIO_NAME_MAP = {'frauth': "FaceAuth",
 
 SF_MAP = {'IFPI': 'IndFPImpact', 'IFNI': 'IndFNImpact',
           'SFPI': 'SocFPImpact', 'SFNI': 'SocFNImpact',
-          'BFPI': 'Average FPImapact',
-          'BFNI': 'Average FNImapact'}
+          'BFPI': 'FPImapact',
+          'BFNI': 'FNImapact'}
 
 METRIC_MAP = {'efdr': 'EFDiscRate',
               'eo': 'EOutcome',

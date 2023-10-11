@@ -4,10 +4,10 @@ from survey_info import *
 from scipy.stats import f_oneway
 from scipy.stats import tukey_hsd
 from collections import defaultdict
-from bar_plots import get_preferred_model
+from bar_plots_pref_prob import get_preferred_model
 from scipy.stats import wilcoxon, chisquare, kendalltau, ttest_rel, pearsonr
 from statsmodels.stats.proportion import proportions_ztest
-from utils import get_parser, aggregate_response, merge_cd_columns
+from utils import get_parser, aggregate_response, merge_cd_columns, map_items_to_value, combine_risk_perceptions
 import rpy2.robjects as robjects
 from rpy2.robjects import numpy2ri
 
@@ -15,31 +15,13 @@ from rpy2.robjects import numpy2ri
 SCENARIOS = ['icu', 'frauth', 'rent']
 
 
-def map_items_to_value(response):
-    response = response.copy(deep=True)
-    for qid in ['Q10.20', 'Q201']:
-        response = response.replace({
-            qid: dict(zip(CHOICES[qid], [-2, -1, 0, 1, 2]))
-        })
-    for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI']:
-        response = response.replace({
-            qid: dict(zip(CHOICES['CD'][::-1], range(len(CHOICES['CD']))))
-        })
-    return response
-
-
-def combine_risk_perceptions(response):
-    assert 'IFPI' in response.columns and 'SFPI' in response.columns
-    assert 'IFNI' in response.columns and 'SFNI' in response.columns
-    response['BFPI'] = (response['IFPI'] + response['SFPI']) / 2
-    response['BFNI'] = (response['IFNI'] + response['SFNI']) / 2
-    return response
-
-
-def run_rq1_anova(response, qid, grouping_criteria):
-    # response[grouping_criteria + [qid, 'PROLIFIC_PID']].to_csv('temp_responses.tsv', sep='\t')
+def run_rq1_anova(response, qid, grouping_criteria, xz_or_yz):
+    # response[grouping_criteria + [qid, 'PROLIFIC_PID']]
+    #   .to_csv('temp_responses.tsv', sep='\t')
     if 'scenario' in grouping_criteria:
         grouping_criteria.remove('scenario')
+    if qid == 'Q201' and xz_or_yz is not None:
+        response = response[response['pref_model'] == f'model {xz_or_yz}']
     if len(grouping_criteria) == 0:
         grouped = [('all', response)]
     else:
@@ -52,23 +34,23 @@ def run_rq1_anova(response, qid, grouping_criteria):
             scneario_grp = scneario_grp.replace({
                 qid: dict(zip(choices, [-2, -1, 0, 1, 2]))
             })
-            # print(scneario_grp[qid])
             columns.append(scneario_grp[qid])
 
         val = (val,)
         condition = {c: val[i] for i, c in enumerate(grouping_criteria)}
         test_stats = f_oneway(*columns)
         output = [' '.join([f'{key}={condition[key]}' for key in condition])]
-        print(*[c.values for c in columns])
         output.extend([f'{c.mean():.3f}' for c in columns])
         output.append(f'{test_stats.statistic:.3f}')
         output.append(f'{test_stats.pvalue:.3f}')
         print("\t&\t".join([str(o) for o in output]) + '\\\\')
 
 
-def run_rq1_tukey(response, qid, grouping_criteria):
+def run_rq1_tukey(response, qid, grouping_criteria, xz_or_yz):
     if 'scenario' in grouping_criteria:
         grouping_criteria.remove('scenario')
+    if qid == 'Q201' and xz_or_yz is not None:
+        response = response[response['pref_model'] == f'model {xz_or_yz}']
     if len(grouping_criteria) == 0:
         grouped = [('all', response)]
     else:
@@ -81,7 +63,6 @@ def run_rq1_tukey(response, qid, grouping_criteria):
             scneario_grp = scneario_grp.replace({
                 qid: dict(zip(choices, [-2, -1, 0, 1, 2]))
             })
-            # print(scneario_grp[qid])
             columns.append(scneario_grp[qid])
 
         val = (val,)
@@ -101,7 +82,6 @@ def run_rq2_anova(response, qid, grouping_criteria):
     choices = CHOICES['CD']
     columns = []
     for sc in ['icu', 'frauth', 'rent']:
-        # scenario_qid = CD_QS[sc][CDS.index(qid)]
         scenario_grp = response[response['scenario'] == sc].copy(deep=True)
         scenario_qids = get_scenario_qids(sc, qid)
         scenario_vals = np.zeros(len(scenario_grp))
@@ -164,7 +144,6 @@ def run_rq2_tukey(response, qid, grouping_criteria):
         columns.append(scenario_vals)
 
     test_stats = tukey_hsd(*columns)
-    # print(test_stats.__dict__)
     for sc1, sc2 in [(0, 1), (0, 2), (1, 2)]:
         print('\t&\t'.join(['', SCENARIO_NAME_MAP[SCENARIOS[sc1]],
                             SCENARIO_NAME_MAP[SCENARIOS[sc2]],
@@ -216,7 +195,6 @@ def run_rq1_prop(response, qid, grouping_criteria):
             counts = df.loc[model]
             nobs = df.sum(axis=0)
             prop = proptest(counts.values, nobs.values)
-            # print(prop)
             prop = list(prop)
             chi_square = prop[0][0]
             pvalue = prop[2][0]
@@ -224,12 +202,34 @@ def run_rq1_prop(response, qid, grouping_criteria):
             numpy2ri.deactivate()
 
 
-def run_rq3_pearson(response, x1, x2, y):
-    response['differences'] = response[x1] - response[x2]
-    test_results = pearsonr(response['differences'].values, response[y].values)
-    print('\t&\t'.join([str(s) for s in [x1, x2, y, test_results.statistic, test_results.pvalue]]))
+def run_rq3_pearson(response, sc, x1, x2, y, xz_or_yz=None, no_diff=False):
+    response = response.copy(deep=True)
+    if y == 'Q201' and xz_or_yz is not None:
+        response = response[response['pref_model'] == f'model {xz_or_yz}']
+    if no_diff:
+        x_col = x1
+    else:
+        response['differences'] = response[x1] - response[x2]
+        x_col = 'differences'
 
+    test_results = pearsonr(response[x_col].values, response[y].values)
+    print('\t&\t'.join([
+        str(s) for s in [sc, x1, x2, y, xz_or_yz,
+                         f'{test_results.statistic:.3f}',
+                         f'{test_results.pvalue:.3f}']
+    ]))
+    """
 
+    else:
+        for tup, grp in grouped:
+            test_results = pearsonr(grp[x_col].values, grp[y].values)
+            print(f'{tup}', end='\t&\t')
+            print('\t&\t'.join([
+                str(s) for s in [sc, x1, x2, y, xz_or_yz,
+                                 f'{test_results.statistic:.3f}',
+                                 f'{test_results.pvalue:.3f}']
+            ]))
+        """
 
 
 def run_wilcoxon(response, by, grp_criteria):
@@ -335,7 +335,6 @@ def run_kendall_test(response, x, y):
         y: dict(zip(y_choices[::-1], range(len(y_choices))))
     })
     stats = kendalltau(response[x], response[y], variant='c')
-    # print(stats)
     return stats
 
 
@@ -343,13 +342,16 @@ if __name__ == "__main__":
 
     parser = get_parser()
     parser.add_argument('--research-question', '-rq', type=int)
+    parser.add_argument('--x-or-y', '-xy', default=None, type=str)
+    parser.add_argument('--x-conditioned', '-xc', default=False,
+                        action='store_true')
+    parser.add_argument('--no-diff', default=False, action='store_true')
     args = parser.parse_args()
 
     qid = args.qid
     grouping_criteria = args.criteria
     fnames = [f + "_approved.csv" for f in args.fnames]
     response = aggregate_response(args.resp_dirs, fnames)
-
     if args.what == 'choice':
         print(run_choice_test(response, qid, grouping_criteria))
     elif args.what == 'cd':
@@ -364,31 +366,73 @@ if __name__ == "__main__":
         for qid, sf in zip(['Q10.20', 'Q10.20', 'Q201', 'Q201'],
                            ['IFPI', 'SFPI', 'IFNI', 'SFNI']):
             print(qid, sf, run_kendall_test(response, qid, sf))
+
     elif args.research_question == 1 and args.what == 'anova':
-        run_rq1_anova(response, qid, grouping_criteria)
-    elif args.research_question == 1 and args.what == 'tukey':
-        run_rq1_tukey(response, qid, grouping_criteria)
-    elif args.research_question == 1 and args.what == 'prop':
-        run_rq1_prop(response, qid, grouping_criteria)
-    elif args.research_question == 2 and args.what == 'anova':
         for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI', 'BFPI', 'BFNI']:
             run_rq2_anova(response, qid, grouping_criteria)
-    elif args.research_question == 2 and args.what == 'tukey':
+    elif args.research_question == 1 and args.what == 'tukey':
         for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI', 'BFPI', 'BFNI']:
             print('\\midrule')
             print('\\multirow{{3}}{{*}}{{{:s}}}'.format(qid), end='')
             run_rq2_tukey(response, qid, grouping_criteria)
-    elif args.research_question == 2 and args.what == 'pairedt':
+    elif args.research_question == 1 and args.what == 'pairedt':
         for qid1, qid2 in [('IFPI', 'IFNI'), ('SFPI', 'SFNI'), ('BFPI', 'BFNI')]:
             for alternative in ['two-sided', 'less', 'greater']:
                 run_rq2_paired_t(response, qid1, qid2, alternative)
+
+    elif args.research_question == 2 and args.what == 'anova':
+        xz_or_yz = None if args.x_or_y is None else args.x_or_y.upper()
+        run_rq1_anova(response, qid, grouping_criteria, xz_or_yz)
+    elif args.research_question == 2 and args.what == 'tukey':
+        run_rq1_tukey(response, qid, grouping_criteria, args.x_or_y.upper())
+    elif args.research_question == 2 and args.what == 'prop':
+        run_rq1_prop(response, qid, grouping_criteria)
     elif args.research_question == 3 and args.what == 'pearson':
+        no_diff = args.no_diff
         response = merge_cd_columns(response)
         response = map_items_to_value(response)
         response = combine_risk_perceptions(response)
         choices = {'Q10.20': 'Model X vs Model Y', 'Q201': 'Model X or Y vs Model Z'}
-        x1s = ['IFPI', 'IFPI', 'SFPI', 'SFPI', 'BFPI', 'BFPI']
-        x2s = ['IFNI', 'IFNI', 'SFNI', 'SFNI', 'BFNI', 'BFNI']
-        ys = ['Q10.20', 'Q201', 'Q10.20', 'Q201', 'Q10.20', 'Q201']
-        for x1, x2, y in zip(x1s, x2s, ys):
-            run_rq3_pearson(response, x1, x2, y)
+        if no_diff:
+            x1s = ['BFPI'] * 3 + ['BFNI'] * 3
+            ys = ['Q10.20', 'Q201', 'Q201',
+                  'Q10.20', 'Q201', 'Q201']
+            x2s = [None] * 6
+            if args.x_conditioned:
+                xz_or_yzs = [None, 'X', 'Y'] * 2
+            else: xz_or_yzs = [None] * 6
+        else:
+            x1s = ['IFPI', 'IFPI', 'IFPI',
+                   'SFPI', 'SFPI', 'SFPI',
+                   'BFPI', 'BFPI', 'BFPI']
+            x2s = ['IFNI', 'IFNI', 'IFNI',
+                   'SFNI', 'SFNI', 'SFNI',
+                   'BFNI', 'BFNI', 'BFNI']
+            ys = ['Q10.20', 'Q201', 'Q201',
+                  'Q10.20', 'Q201', 'Q201',
+                  'Q10.20', 'Q201', 'Q201']
+            if args.x_conditioned:
+                xz_or_yzs = [None, 'X', 'Y',
+                            None, 'X', 'Y',
+                            None, 'X', 'Y']
+            else:
+                xz_or_yzs = [None] * 9
+        grouping_criteria = args.criteria
+        for sc in SCENARIOS + ['all']:
+            if sc == 'all':
+                scenario_grp = response.copy(deep=True)
+            else:
+                scenario_grp = response[response['scenario'] == sc].copy(deep=True)
+
+            if 'scenario' in grouping_criteria:
+                grouping_criteria.remove('scenario')
+            if grouping_criteria  == []:
+                grouped = [('-', response)]
+            else:
+                grouped = scenario_grp.groupby(by=grouping_criteria)
+            for tup, grp in grouped:
+                for x1, x2, y, xz_or_yz in zip(x1s, x2s, ys, xz_or_yzs):
+                    print(tup, end='\t&\t')
+                    run_rq3_pearson(grp, sc, x1, x2, y,
+                                    xz_or_yz, no_diff)
+                print()

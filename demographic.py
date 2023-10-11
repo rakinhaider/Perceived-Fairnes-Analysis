@@ -33,16 +33,16 @@ if __name__ == "__main__":
 
     df = aggregate_response(args.resp_dirs, fnames)
     print(df.columns)
-    print(df['Ethnicity'].value_counts())
-    print(df['Sex'].value_counts()/len(df))
-    print(df['Student Status'].value_counts())
-    print(df['Employment Status'].value_counts()/len(df))
-    print(df['PGM'].value_counts()/ len(df))
-    print(df['age'].value_counts())
+    # print(df['Ethnicity'].value_counts())
+    # print(df['Sex'].value_counts()/len(df))
+    # print(df['Student Status'].value_counts())
+    # print(df['Employment Status'].value_counts()/len(df))
+    # print(df['PGM'].value_counts()/ len(df))
+    # print(df['age'].value_counts())
 
     ages = df['age'].copy()
     def age_bucketing(val):
-        print(val)
+        # print(val)
         if val < 25:
             return 0
         elif val < 40:
@@ -51,4 +51,14 @@ if __name__ == "__main__":
             return 2
 
     age_buckets = ages.apply(age_bucketing)
-    print(age_buckets.value_counts()/len(df))
+    # print(age_buckets.value_counts()/len(df))
+    df.to_csv('temp_response.tsv', sep='\t')
+
+    from datetime import datetime
+    def time_diff(row):
+        starttime = datetime.strptime(row['StartDate'], '%Y-%m-%d %H:%M:%S')
+        endtime = datetime.strptime(row['EndDate'], '%Y-%m-%d %H:%M:%S')
+        return (endtime - starttime)
+
+    times = df.apply(lambda row: time_diff(row), axis=1)
+    print(times.mean())
