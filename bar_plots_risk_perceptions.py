@@ -46,8 +46,6 @@ if __name__ == "__main__":
     bar_width = 0.75
     bars = ax.bar(range(len(means)), means, yerr=stds, width=bar_width,
                   capsize=5)
-    print(means)
-    # print(stds)
     for bar, c in zip(bars, ['green', 'blue', 'red']):
         bar.set_color(c)
     ax.set_xticks(range(len(means)))
@@ -64,7 +62,6 @@ if __name__ == "__main__":
     ax.set_ylabel(f'{SF_MAP[qid]} Ratings',
                   fontsize='small')
     ax.set_xlabel("Contexts", fontsize='small')
-    # plt.show()
     plt.tight_layout()
     plt.gcf().get_size_inches()
     path = os.path.join('outputs/10312021_11092021/barplots/risk_perceptions',
