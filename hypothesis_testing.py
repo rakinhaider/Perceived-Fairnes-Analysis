@@ -77,7 +77,7 @@ def run_rq2_anova(response, qid, grouping_criteria, xz_or_yz):
         output.extend([f'{c.mean():.3f}' for c in columns])
         output.append(f'{test_stats.statistic:.3f}')
         output.append(f'{test_stats.pvalue:.3f}')
-        print("\t&\t".join([str(o) for o in output]) + '\\\\')
+        print("\t".join([str(o) for o in output]))
 
 
 def run_rq2_tukey(response, qid, grouping_criteria, xz_or_yz):
@@ -93,16 +93,19 @@ def run_rq2_tukey(response, qid, grouping_criteria, xz_or_yz):
             scneario_grp = grp[grp['scenario'] == scenario].copy(deep=True)
             columns.append(scneario_grp[qid])
 
-        val = (val,)
-        print({c: val[i] for i, c in enumerate(grouping_criteria)})
         test_stats = tukey_hsd(*columns)
 
         for sc1, sc2 in [(0, 1), (0, 2), (1, 2)]:
-            print('\t&\t'.join([SCENARIO_NAME_MAP[SCENARIOS[sc1]],
-                                SCENARIO_NAME_MAP[SCENARIOS[sc2]],
-                                f'{test_stats.statistic[sc1][sc2]:.3f}',
-                                f'{test_stats.pvalue[sc1][sc2]:.3f}'])
-                  + '\\\\')
+            if test_stats.pvalue[sc1][sc2] <= 0.05:
+                if grouping_criteria != []:
+                    outputs = [f'{grouping_criteria[0]} = {val}']
+                else:
+                    outputs = ['']
+                outputs += [SCENARIO_NAME_MAP[SCENARIOS[sc1]],
+                            SCENARIO_NAME_MAP[SCENARIOS[sc2]],
+                            f'{test_stats.statistic[sc1][sc2]:.3f}',
+                            f'{test_stats.pvalue[sc1][sc2]:.3f}']
+                print('\t'.join(outputs))
 
 
 
@@ -220,9 +223,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     qid = args.qid
-    grouping_criteria = args.criteria
     fnames = [f + "_approved.csv" for f in args.fnames]
+    grouping_criteria = args.criteria
+    if "scenario" in grouping_criteria:
+        grouping_criteria.remove('scenario')
+
     xz_or_yz = args.x_or_y
+    xz_or_yz = None if args.x_or_y is None else args.x_or_y.upper()
+
     response = aggregate_response(args.resp_dirs, fnames)
     response = merge_cd_columns(response)
     response = map_items_to_value(response)
@@ -244,10 +252,9 @@ if __name__ == "__main__":
             run_rq1_paired_t(response, qid1, qid2, sc, alternative)
 
     elif args.research_question == 2 and args.what == 'anova':
-        xz_or_yz = None if args.x_or_y is None else args.x_or_y.upper()
-        run_rq1_anova(response, qid, grouping_criteria, xz_or_yz)
+        run_rq2_anova(response, qid, grouping_criteria, xz_or_yz)
     elif args.research_question == 2 and args.what == 'tukey':
-        run_rq1_tukey(response, qid, grouping_criteria, args.x_or_y.upper())
+        run_rq2_tukey(response, qid, grouping_criteria, xz_or_yz)
     elif args.research_question == 2 and args.what == 'prop':
         run_rq2_prop(response, qid, grouping_criteria)
     elif args.research_question == 3 and args.what == 'pearson':
@@ -273,8 +280,8 @@ if __name__ == "__main__":
                   'Q10.20', 'Q201', 'Q201']
             if args.x_conditioned:
                 xz_or_yzs = [None, 'X', 'Y',
-                            None, 'X', 'Y',
-                            None, 'X', 'Y']
+                             None, 'X', 'Y',
+                             None, 'X', 'Y']
             else:
                 xz_or_yzs = [None] * 9
         grouping_criteria = args.criteria
