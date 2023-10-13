@@ -1,21 +1,12 @@
 import os
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
+
+from constants import CRITERIA_TO_TEXT
 from utils import get_parser, map_items_to_value
-from survey_response_aggregator import aggregate_response
-from publication_plots_util import set_rcparams, set_size
-from survey_info import SCENARIO_NAME_MAP
-from hypothesis_testing import SCENARIOS, merge_cd_columns
-
-VALUE_SHORT_FORM = {'Disadvantaged': 'Disadv.',
-                    'Advantaged': 'Adv.',
-                    'Caucasian': 'Cauc.',
-                    'Non-Caucasian': 'Non-Cauc.'}
-CRITERIA_TO_TEXT = {'group': 'Disadv. Group',
-                    "Ethnicity": 'Ethnicity',
-                    'PGM': 'self-identified privilege'}
-
+from utils import aggregate_response
+from plotters.publication_plots_util import set_rcparams, set_size
+from survey_info import SCENARIO_NAME_MAP, SCENARIOS
 
 if __name__ == "__main__":
     set_rcparams(fontsize=10)
@@ -91,6 +82,6 @@ if __name__ == "__main__":
     else:
         fname = f'{args.x_or_y.lower()}z_preference'
 
-    dir = os.path.join('outputs/10312021_11092021/barplots/mean_preferences')
+    dir = os.path.join('../outputs/10312021_11092021/barplots/mean_preferences')
     os.makedirs(dir, exist_ok=True)
     plt.savefig(os.path.join(dir, fname + '.pdf'), format='pdf')

@@ -115,7 +115,3 @@ METRIC_MAP = {'efdr': 'EFDiscRate',
               'eo': 'EOutcome',
               'efor': 'EFOmitRate'}
 SCENARIOS = ['icu', 'frauth', 'rent']
-
-
-def get_scenario_qids(scenario, qid):
-    return [qid]

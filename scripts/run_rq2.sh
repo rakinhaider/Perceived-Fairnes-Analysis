@@ -29,7 +29,7 @@ echo '############################################################'
 echo 'Paired Tukey Test Significant Statistics on XY Preferences'
 run_tests 'tukey' 'Q10.20'
 
-python -m bar_plots_mean_preferences --resp-dirs ${resp_dirs}\
+python -m plotters.bar_plots_mean_preferences --resp-dirs ${resp_dirs}\
   --fnames ${fnames} --qid Q10.20
 
 echo '############################################################'
@@ -40,7 +40,7 @@ echo '############################################################'
 echo 'Paired Tukey Test Significant Statistics on XZ Preferences'
 run_tests 'tukey' 'Q201' '--x-or-y X'
 
-python -m bar_plots_mean_preferences --resp-dirs ${resp_dirs}\
+python -m plotters.bar_plots_mean_preferences --resp-dirs ${resp_dirs}\
   --fnames ${fnames} --qid Q201 --x-or-y X
 
 echo '############################################################'
@@ -51,5 +51,5 @@ echo '############################################################'
 echo 'Paired Tukey Test Significant Statistics on YZ Preferences'
 run_tests 'tukey' 'Q201' '--x-or-y Y'
 
-python -m bar_plots_mean_preferences --resp-dirs ${resp_dirs}\
+python -m plotters.bar_plots_mean_preferences --resp-dirs ${resp_dirs}\
   --fnames ${fnames} --qid Q201 --x-or-y Y

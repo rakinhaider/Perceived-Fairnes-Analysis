@@ -2,13 +2,12 @@ import os.path
 
 import numpy as np
 import matplotlib.pyplot as plt
-from utils import get_parser
-from survey_response_aggregator import aggregate_response
+from utils import get_parser, map_items_to_value, combine_risk_perceptions, merge_cd_columns
+from utils import aggregate_response
 from publication_plots_util import set_rcparams, set_size
 from survey_info import (
-    SCENARIOS, get_scenario_qids, CHOICES, SCENARIO_NAME_MAP, SF_MAP
+    SCENARIOS, CHOICES, SCENARIO_NAME_MAP, SF_MAP
 )
-
 VALUE_SHORT_FORM = {'Disadvantaged': 'Disadv.',
                     'Advantaged': 'Adv.',
                     'Caucasian': 'Cauc.',
@@ -29,6 +28,9 @@ if __name__ == "__main__":
     assert 'FNI' in qid or 'FPI' in qid
 
     response = aggregate_response(args.resp_dirs, fnames)
+    response = merge_cd_columns(response)
+    response = map_items_to_value(response)
+    response = combine_risk_perceptions(response)
 
     fig, ax = plt.subplots(figsize=set_size(129, 0.95,
                                             aspect_ratio=1),
@@ -37,17 +39,7 @@ if __name__ == "__main__":
     data = []
     for sc in SCENARIOS:
         scenario_grp = response[response['scenario'] == sc]
-        scenario_qids = get_scenario_qids(sc, qid)
-        scenario_vals = np.zeros(len(scenario_grp))
-        for scenario_qid in scenario_qids:
-            scenario_grp = scenario_grp.replace({
-                scenario_qid: dict(zip(choices[::-1], range(len(choices))))
-            })
-            scenario_vals += scenario_grp[scenario_qid]
-        # print(sc, scenario_vals.values)
-
-        scenario_vals /= len(scenario_qids)
-        data.append(scenario_vals)
+        data.append(scenario_grp[qid])
     boxplot = ax.boxplot(data, showfliers=False, labels=SCENARIOS,
                          patch_artist=True, positions=[0, 1, 2], autorange=True)
     for bp, color in zip(boxplot['boxes'], ['lightgreen', 'lightblue', 'pink']):
@@ -68,5 +60,5 @@ if __name__ == "__main__":
     # plt.show()
     plt.tight_layout()
     plt.gcf().get_size_inches()
-    path = os.path.join('outputs/10312021_11092021/boxplots', f'{qid}.pdf')
+    path = os.path.join('../outputs/10312021_11092021/boxplots', f'{qid}.pdf')
     plt.savefig(path, format='pdf')

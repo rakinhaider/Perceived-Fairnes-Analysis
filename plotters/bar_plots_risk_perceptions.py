@@ -3,11 +3,11 @@ import os.path
 import numpy as np
 import matplotlib.pyplot as plt
 from utils import get_parser
-from survey_response_aggregator import aggregate_response
+from utils import aggregate_response
 from publication_plots_util import set_rcparams, set_size
 from utils import merge_cd_columns, map_items_to_value, combine_risk_perceptions
 from survey_info import (
-    SCENARIOS, get_scenario_qids, CHOICES, SCENARIO_NAME_MAP, SF_MAP
+    SCENARIOS, SCENARIO_NAME_MAP, SF_MAP
 )
 
 VALUE_SHORT_FORM = {'Disadvantaged': 'Disadv.',
@@ -64,6 +64,6 @@ if __name__ == "__main__":
     ax.set_xlabel("Contexts", fontsize='small')
     plt.tight_layout()
     plt.gcf().get_size_inches()
-    path = os.path.join('outputs/10312021_11092021/barplots/risk_perceptions',
+    path = os.path.join('../outputs/10312021_11092021/barplots/risk_perceptions',
                         f'{qid}.pdf')
     plt.savefig(path, format='pdf')

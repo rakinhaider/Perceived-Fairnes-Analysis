@@ -5,7 +5,7 @@ from summarizer import (
     load_config, drop_skip_rows, SKIP_ROWS, get_pgm, keep_latest_from_pid,
     merge_demographics, AWAITING_REVIEW
 )
-from survey_response_aggregator import aggregate_response
+from utils import aggregate_response
 
 if __name__ == "__main__":
     args = get_parser().parse_args()

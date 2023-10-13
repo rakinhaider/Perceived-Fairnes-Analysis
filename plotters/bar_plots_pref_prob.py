@@ -1,36 +1,11 @@
 import os
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-from utils import get_parser
-from survey_response_aggregator import aggregate_response
+from utils import get_parser, get_preferred_model
+from utils import aggregate_response
 from publication_plots_util import set_rcparams, set_size
-from survey_info import SCENARIO_NAME_MAP, CHOICES
-
-VALUE_SHORT_FORM = {'Disadvantaged': 'Disadv.',
-                    'Advantaged': 'Adv.',
-                    'Caucasian': 'Cauc.',
-                    'Non-Caucasian': 'Non-Cauc.'}
-
-
-def get_preferred_model(row):
-    if row['Q201'] in CHOICES['Q201'][-2:]:
-        return 'z'
-    elif row['Q201'] in CHOICES['Q201'][:2]:
-        if row['Q10.20'] in CHOICES['Q10.20'][-2:]:
-            return 'y'
-        elif row['Q10.20'] in CHOICES['Q10.20'][:2]:
-            return 'x'
-        else:
-            return 'xy'
-    else:
-        if row['Q10.20'] in CHOICES['Q10.20'][-2:]:
-            return 'y'
-        elif row['Q10.20'] in CHOICES['Q10.20'][:2]:
-            return 'x'
-        else:
-            return 'xyz'
-
+from survey_info import SCENARIO_NAME_MAP
+from constants import VALUE_SHORT_FORM
 
 if __name__ == "__main__":
     plt.style.use('default')
@@ -125,5 +100,5 @@ if __name__ == "__main__":
     plt.tight_layout()
     print(plt.gcf().get_size_inches())
     # plt.show()
-    dir_path = os.path.join('outputs', '10312021_11092021', 'barplots')
+    dir_path = os.path.join('../outputs', '10312021_11092021', 'barplots')
     plt.savefig(os.path.join(dir_path, '_'.join(criteria) + '.pdf'), format='pdf')

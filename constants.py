@@ -34,3 +34,10 @@ TEX_FIGURE = """
     \\label{{fig:my_label}}
 \\end{{figure}}
 """
+VALUE_SHORT_FORM = {'Disadvantaged': 'Disadv.',
+                    'Advantaged': 'Adv.',
+                    'Caucasian': 'Cauc.',
+                    'Non-Caucasian': 'Non-Cauc.'}
+CRITERIA_TO_TEXT = {'group': 'Disadv. Group',
+                    "Ethnicity": 'Ethnicity',
+                    'PGM': 'self-identified privilege'}

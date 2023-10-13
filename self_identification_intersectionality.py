@@ -4,9 +4,9 @@ import numpy as np
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from constants import AWAITING_REVIEW, APPROVED, PROLIFIC_PID
-from publication_plots_util import set_rcparams, set_size
+from plotters.publication_plots_util import set_rcparams, set_size
 from summarizer import (
-    format_responses, load_config, load_question
+    load_config
 )
 
 ETHNICITY_MAP = {'White/Caucasian': 'White',

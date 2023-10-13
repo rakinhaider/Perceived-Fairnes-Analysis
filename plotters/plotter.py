@@ -144,7 +144,7 @@ if __name__ == "__main__":
     parser.add_argument('--criteria', nargs="*", default=['scenario'])
     parser.add_argument('--what', default='test')
     args = parser.parse_args()
-    response = pd.read_csv(os.path.join('data', 'processed', 'response.csv'))
+    response = pd.read_csv(os.path.join('../data', 'processed', 'response.csv'))
     trade_off_qs = args.qid
     criteria = args.criteria
 
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     # plot_model_property(response, criteria)
     plt.show(block=False)
 
-    out_dir = 'outputs'
+    out_dir = '../outputs'
     out_dir = os.path.join(out_dir, '_'.join(args.data_dirs))
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
