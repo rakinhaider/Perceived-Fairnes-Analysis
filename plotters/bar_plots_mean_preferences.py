@@ -27,15 +27,12 @@ if __name__ == "__main__":
     if qid == 'Q201' and xz_or_yz is not None:
         response = response[response['pref_model'] == f'model {xz_or_yz}']
 
-    fig, axes = plt.subplots(2, 2,
-                    figsize=set_size(430 * 0.75, 0.95,
-                                     aspect_ratio=0.75),
-                    tight_layout=True)
 
-    for i, j, grouping_criteria in [(0, 0, None), (0, 1, 'group'),
-                                    (1, 0, 'Ethnicity'), (1, 1, 'PGM')]:
-
-        ax = axes[i][j]
+    for i, grouping_criteria in [(0, None), (1, 'group'),
+                                 (2, 'Ethnicity'), (3, 'PGM')]:
+        fig, ax = plt.subplots(
+            figsize=set_size(107, 0.95, aspect_ratio=1))
+        # ax = axes[i]
         colors = ['green', 'blue', 'red']
         x_pos_start = 1
         for scenario, c in zip(SCENARIOS, colors):
@@ -52,7 +49,7 @@ if __name__ == "__main__":
             x_tick_labels = []
             for val, grp in grouped:
                 columns.append(grp[qid])
-                x_tick_labels.append(val)
+                x_tick_labels.append(val.capitalize())
             means = [c.mean() for c in columns]
             errors = [c.std() for c in columns]
             errors = [c.std() / np.sqrt(len(c)) for c in columns]
@@ -67,21 +64,20 @@ if __name__ == "__main__":
         ax.tick_params(axis='x', length=0)
         ax.set_xticks([2, 6] if grouping_criteria is not None
                       else [1 + pos_increment])
-        ax.set_xticklabels(x_tick_labels, fontsize='small')
+        ax.set_xticklabels(x_tick_labels, fontsize='x-small')
         ax.set_yticks(range(-2, 3))
         ax.set_yticklabels(range(-2, 3), fontsize='small')
         ax.set_ylim(-2, 2.2)
-        if grouping_criteria:
-            x_label = f'Partitioned by {CRITERIA_TO_TEXT[grouping_criteria]}'
-        else:  x_label = 'Overall'
-        ax.set_xlabel(x_label, fontsize='small')
-        ax.legend(ncols=3, loc='upper center', fontsize='4.5')
+        ax.legend(fontsize=5, loc='best')
 
-    if qid == 'Q10.20':
-        fname = 'xy_preference'
-    else:
-        fname = f'{args.x_or_y.lower()}z_preference'
+        if qid == 'Q10.20':
+            fname = 'xy_preference'
+        else:
+            fname = f'{args.x_or_y.lower()}z_preference'
 
-    dir = os.path.join('../outputs/10312021_11092021/barplots/mean_preferences')
-    os.makedirs(dir, exist_ok=True)
-    plt.savefig(os.path.join(dir, fname + '.pdf'), format='pdf')
+        dir = os.path.join('outputs/10312021_11092021/barplots/mean_preferences')
+        os.makedirs(dir, exist_ok=True)
+        fname += f'_{grouping_criteria}'
+        print(os.path.join(dir, fname + '.pdf'))
+        plt.tight_layout()
+        plt.savefig(os.path.join(dir, fname + '.pdf'), format='pdf')

@@ -5,7 +5,7 @@ import numpy as np
 import os
 import argparse
 from survey_info import *
-from publication_plots_util import set_rcparams, set_size
+from .publication_plots_util import set_rcparams, set_size
 
 results = {
     'Question 1': [10, 15, 17, 32, 26],
