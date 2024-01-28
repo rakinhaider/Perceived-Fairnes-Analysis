@@ -18,7 +18,8 @@ def get_parser():
     parser.add_argument('--fnames', nargs="*", default=['10312021'])
     parser.add_argument('--what', default='choice',
                 choices=['choice', 'cd', 'model_fair', 'model_bias', 'kendall',
-                         'anova', 'tukey', 'prop', 'pairedt', 'pearson'])
+                         'anova', 'tukey', 'prop', 'pairedt', 'pearson',
+                         'normal-check', 'mwu', 'wsr'])
     return parser
 
 

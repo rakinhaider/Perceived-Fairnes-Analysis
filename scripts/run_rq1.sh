@@ -10,7 +10,12 @@ fnames='10312021 11092021'
 # python -m hypothesis_testing --resp-dirs ${resp_dirs} --fnames ${fnames}\
 #   -rq 1 --what tukey
 
+# echo '############################################################'
+# echo 'Paired t-Test Statistics'
+# python -m hypothesis_testing --resp-dirs ${resp_dirs} --fnames ${fnames}\
+#   -rq 1 --what pairedt
+
 echo '############################################################'
-echo 'Paired t-Test Statistics'
+echo 'Wilcoxon Signed Rank Test Statistics'
 python -m hypothesis_testing --resp-dirs ${resp_dirs} --fnames ${fnames}\
-  -rq 1 --what pairedt
+  -rq 1 --what wsr

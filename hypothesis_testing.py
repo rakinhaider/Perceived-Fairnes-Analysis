@@ -1,19 +1,57 @@
+import os
+import numpy as np
 import pandas as pd
+import scipy.stats
 from survey_info import *
+import matplotlib.pyplot as plt
 from scipy.stats import f_oneway
 from scipy.stats import tukey_hsd
 from collections import defaultdict
-from scipy.stats import ttest_rel, pearsonr
+from scipy.stats import ttest_rel, pearsonr, mannwhitneyu, wilcoxon
 from statsmodels.stats.proportion import proportions_ztest
 from utils import (
     get_parser, aggregate_response, merge_cd_columns,
     map_items_to_value, combine_risk_perceptions, get_preferred_model)
 import rpy2.robjects as robjects
 from rpy2.robjects import numpy2ri
+from plotters.plotter import set_rcparams, set_size
 
 
 SCENARIOS = ['icu', 'frauth', 'rent']
 
+
+def check_normal(response, qid, dirs, xz_or_yz):
+    set_rcparams(fontsize=10)
+    for sc in ['icu', 'frauth', 'rent']:
+        fig, ax = plt.subplots(
+            figsize=set_size(430*0.32, 0.95, 0.8)
+        )
+        if qid == 'Q201' and xz_or_yz is not None:
+            response = response[response['pref_model'] == f'model {xz_or_yz}']
+        scenario_grp = response[response['scenario'] == sc].copy(deep=True)
+        counts = scenario_grp[qid].value_counts()
+        if 'Q' in 'qid':
+            counts = counts.reindex([-2, -1, 0, 1, 2], fill_value=0)
+        else:
+            counts = counts.sort_index()
+        heights = counts.values
+        values = counts.index
+        plt.xticks(counts.index, counts.index)
+        plt.bar(x=values, height=heights, color='green')
+        plt.xlabel('Likert Item Scores', fontsize='x-small')
+        plt.ylabel('Counts', fontsize='x-small')
+        dir_name = os.path.join('outputs', '_'.join(dirs), 'barplots', 'normal')
+        os.makedirs(dir_name, exist_ok=True)
+        plt.tight_layout()
+        plt.savefig(f'{dir_name}/{sc}_{qid}.pdf', format='pdf')
+        plt.cla()
+        x = scenario_grp[qid]
+        loc = x.mean()
+        scale = x.std()
+        test_stats = scipy.stats.kstest(x, 'norm', args=(loc, scale))
+        print('\t&\t'.join([qid, sc,
+                            f'{test_stats.statistic:.4f}',
+                            f'{test_stats.pvalue:.4f}']))
 
 def print_outputs(outputs):
     print('\t'.join([str(o) for o in outputs]))
@@ -56,6 +94,31 @@ def run_rq1_paired_t(response, qid1, qid2, sc, alternative='two-sided'):
     test_stats = ttest_rel(vals[0], vals[1], alternative=alternative)
     output = [SCENARIO_NAME_MAP[sc], f'({qid1}, {qid2})', alternative]
     output.extend([f'{v.mean():.3f}' for v in vals])
+    output.append(f'{test_stats.statistic:.3f}')
+    output.append(f'{test_stats.pvalue:.3f}')
+    print_outputs(output)
+
+
+def run_rq1_mannwhitneyu(response, qid1, qid2, sc, alternative='two-sided'):
+    scenario_grp = response[response['scenario'] == sc].copy(deep=True)
+    vals = [scenario_grp[qid1].values, scenario_grp[qid2].values]
+
+    test_stats = mannwhitneyu(vals[0], vals[1], alternative=alternative)
+    output = [SCENARIO_NAME_MAP[sc], f'({qid1}, {qid2})', alternative]
+    output.extend([f'{v.mean():.3f}' for v in vals])
+    output.append(f'{test_stats.statistic:.3f}')
+    output.append(f'{test_stats.pvalue:.3f}')
+    print_outputs(output)
+
+
+def run_rq1_wilcoxon(response, qid1, qid2, sc, alternative='two-sided'):
+    scenario_grp = response[response['scenario'] == sc].copy(deep=True)
+    vals = [scenario_grp[qid1].values, scenario_grp[qid2].values]
+
+    test_stats = wilcoxon(vals[0], vals[1], alternative=alternative)
+    output = [SCENARIO_NAME_MAP[sc], f'({qid1}, {qid2})', alternative]
+    print([np.sort(v) for v in vals])
+    output.extend([f'{np.median(v):.3f}' for v in vals])
     output.append(f'{test_stats.statistic:.3f}')
     output.append(f'{test_stats.pvalue:.3f}')
     print_outputs(output)
@@ -216,7 +279,6 @@ if __name__ == "__main__":
     if "scenario" in grouping_criteria:
         grouping_criteria.remove('scenario')
 
-    xz_or_yz = args.x_or_y
     xz_or_yz = None if args.x_or_y is None else args.x_or_y.upper()
 
     response = aggregate_response(args.resp_dirs, fnames)
@@ -224,7 +286,9 @@ if __name__ == "__main__":
     response = map_items_to_value(response)
     response = combine_risk_perceptions(response)
 
-    if args.research_question == 1 and args.what == 'anova':
+    if args.what == 'normal-check':
+        check_normal(response, qid, args.resp_dirs, xz_or_yz)
+    elif args.research_question == 1 and args.what == 'anova':
         for qid in ['IFPI', 'SFPI', 'IFNI', 'SFNI', 'BFPI', 'BFNI']:
             run_rq1_anova(response, qid)
 
@@ -240,6 +304,24 @@ if __name__ == "__main__":
         qids = [('IFPI', 'IFNI'), ('SFPI', 'SFNI')] * 3
         for sc, alternative, (qid1, qid2) in zip(scenarios, alternatives, qids):
             run_rq1_paired_t(response, qid1, qid2, sc, alternative)
+
+    elif args.research_question == 1 and args.what == 'mwu':
+        scenarios = ['icu'] * 2 + ['frauth'] * 2 + ['rent'] * 2
+        alternatives = ['less', 'less',
+                        'greater', 'greater',
+                        'greater', 'less']
+        qids = [('IFPI', 'IFNI'), ('SFPI', 'SFNI')] * 3
+        for sc, alternative, (qid1, qid2) in zip(scenarios, alternatives, qids):
+            run_rq1_mannwhitneyu(response, qid1, qid2, sc, alternative)
+
+    elif args.research_question == 1 and args.what == 'wsr':
+        scenarios = ['icu'] * 2 + ['frauth'] * 2 + ['rent'] * 2
+        alternatives = ['less', 'less',
+                        'greater', 'greater',
+                        'greater', 'less']
+        qids = [('IFPI', 'IFNI'), ('SFPI', 'SFNI')] * 3
+        for sc, alternative, (qid1, qid2) in zip(scenarios, alternatives, qids):
+            run_rq1_wilcoxon(response, qid1, qid2, sc, alternative)
 
     elif args.research_question == 2 and args.what == 'anova':
         run_rq2_anova(response, qid, grouping_criteria, xz_or_yz)
