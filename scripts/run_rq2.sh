@@ -17,12 +17,6 @@ function run_tests() {
 
 echo '############################################################'
 echo 'ANOVA Test Statistics on XY Preferences'
-# python -m hypothesis_testing --resp-dirs ${resp_dirs} --fnames ${fnames}\
-#   -rq 2 --what anova --qid 10.20
-# for criteria in group Ethnicity PGM; do
-#   python -m hypothesis_testing --resp-dirs ${resp_dirs} --fnames ${fnames}\
-#   -rq 2 --what anova --criteria ${criteria} --qid Q10.20
-# done
 run_tests 'anova' 'Q10.20'
 
 echo '############################################################'

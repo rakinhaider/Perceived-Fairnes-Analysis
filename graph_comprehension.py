@@ -34,21 +34,20 @@ def load_reviewed_responses(batch_dir, participant_fname, fname_base):
 
 
 def plot_graph_comprehension_rate_counts(count_stats):
-    plt.figure(figsize=set_size(width=430, fraction=.95, aspect_ratio=0.75))
-    set_rcparams(fontsize=18)
+    set_rcparams(fontsize=9)
+    plt.figure(figsize=set_size(width=240, fraction=.95, aspect_ratio=0.75))
 
     colors = plt.get_cmap('RdYlGn')([0.15, 0.85])
     # count_stats not used right now.
-    plt.bar(range(0, 5), [0, 2, 68, 57, 86], label='accepted',
-            bottom=[7, 13, 3, 1, 1], color=colors[1])
-    plt.bar(range(0, 5), [7, 13, 3, 1, 1], label='rejected', color=colors[0])
-    plt.xticks(range(0, 5), np.linspace(0, 1, 5))
-    plt.xlabel('Correct graph comprehension rate.')
-    plt.ylabel('Number of participants.')
-    plt.legend(fontsize=9)
+    plt.bar(range(0, 5), [0, 2, 68, 57, 86], label='Accepted',
+            bottom=[7, 13, 3, 1, 1], color='green')
+    plt.bar(range(0, 5), [7, 13, 3, 1, 1], label='Rejected', color='red')
+    plt.xticks(range(0, 5), np.linspace(0, 1, 5), fontsize='small')
+    plt.xlabel('Correct graph comprehension rate.', fontsize='small')
+    plt.ylabel('Number of participants.', fontsize='small')
+    plt.legend(fontsize='small')
     plt.tight_layout()
-    plt.savefig('outputs/graph_comprehension_stats.pdf')
-    plt.show()
+    plt.savefig('outputs/graph_comprehension_stats.pdf', format='pdf')
 
 
 if __name__ == "__main__":
@@ -83,7 +82,7 @@ if __name__ == "__main__":
 
     print(total)
     print(count_stats)
-    # plot_graph_comprehension_rate_counts(count_stats)
+    plot_graph_comprehension_rate_counts(count_stats)
 
     per_question_count = {q:[] for q in ATNT_QS}
     for b, fname_base in zip(batches, fname_bases):
@@ -103,16 +102,19 @@ if __name__ == "__main__":
         rates.append(agg[True] / sum(agg))
 
     plt.clf()
-    colors = plt.get_cmap('RdYlGn')([0.15, 0.85])
-    plt.figure(figsize=set_size(width=430, fraction=.95, aspect_ratio=0.75))
-    set_rcparams(fontsize=18)
-    plt.bar(range(0, 8, 2), rates, width=1.4, color=colors[1])
-    plt.xticks(range(0, 8, 2), ['GC' + str(i) for i in range(1, 5)], rotation=45)
-    plt.yticks(np.linspace(.2, 1, 5), range(20, 110, 20))
-    plt.xlabel('Questions')
-    plt.ylabel('Participants answered \ncorrectly (in \%)')
+    # colors = plt.get_cmap('RdYlGn')([0.15, 0.85])
+    plt.figure(figsize=set_size(width=240, fraction=.95, aspect_ratio=0.75))
+    set_rcparams(fontsize=9)
+    plt.bar(range(0, 8, 2), rates, width=1.4, color='green')
+    plt.xticks(range(0, 8, 2), ['GC' + str(i) for i in range(1, 5)], rotation=45,
+               fontsize='small')
+    plt.yticks(np.linspace(.2, 1, 5), range(20, 110, 20),
+               fontsize='small')
+    plt.xlabel('Questions', fontsize='small')
+    plt.ylabel('Participants answered \ncorrectly (in \%)', fontsize='small')
     for rate, loc in zip(rates, range(0, 8, 2)):
-        plt.text(loc - 0.35, rate + 0.025, '{:.2f}'.format(rate*100), fontsize=12)
-    plt.tight_layout()
-    plt.savefig('outputs/per_question_stat.pdf')
-    plt.show()
+        plt.text(loc - 0.35, rate + 0.025, '{:.2f}'.format(rate*100),
+                 fontsize='small')
+    plt.tight_layout(pad=0.2)
+    plt.savefig('outputs/per_question_stat.pdf', format='pdf')
+
